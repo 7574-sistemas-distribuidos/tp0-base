@@ -1,0 +1,23 @@
+version: '3'
+services:
+  server:
+    container_name: server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      environment:
+        - PYTHONUNBUFFERED=1
+        - SERVER_IP=server
+        - SERVER_PORT=12345
+    entrypoint: python3 /server.py
+
+  client:
+    container_name: consumer
+    build:
+      context: .
+      dockerfile: consumer/Dockerfile
+    entrypoint: /usr/local/bin/consumer
+    depends_on:
+      - server
+    links: 
+      - rabbitmq
