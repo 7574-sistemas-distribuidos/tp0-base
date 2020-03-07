@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/viper"
 )
 
-// InitConfig Function that uses viper library to parse env variables. If 
+// InitConfig Function that uses viper library to parse env variables. If
 // some of the variables cannot be parsed, an error is returned
 func InitConfig() (*viper.Viper, error) {
 	v := viper.New()
@@ -26,13 +26,13 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
 
-	// Parse time.Duration variables and return an error 
+	// Parse time.Duration variables and return an error
 	// if those variables cannot be parsed
-	if _, err := time.ParseDuration(v.GetString("loop", "lapse")) ; if err ! nil {
+	if _, err := time.ParseDuration(v.GetString("loop_lapse")); err != nil {
 		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_LAPSE env var as time.Duration.")
 	}
 
-	if _, err := time.ParseDuration(v.GetString("loop", "period")) ; if err ! nil {
+	if _, err := time.ParseDuration(v.GetString("loop_period")); err != nil {
 		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_PERIOD env var as time.Duration.")
 	}
 
@@ -43,16 +43,17 @@ func InitConfig() (*viper.Viper, error) {
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
 func CreateClientSocket(v *viper.Viper) net.Conn {
-	conn, err := net.Dial("tcp", v.GetString("server", "address"))
+	conn, err := net.Dial("tcp", v.GetString("server_address"))
 	if err != nil {
-		return log.Fatal("Could not connect to server. Error: %s", error)
+		log.Fatalf("Could not connect to server. Error: %s", err)
 	}
+	return conn
 }
 
 // StartClientLoop Send messages to
 func StartClientLoop(v *viper.Viper, clientSocket net.Conn) {
-	loopLapse, _ := v.GetDuration("loop", "lapse"))
-	loopPeriod, _ := v.Getduration("loop", "period")
+	loopLapse := v.GetDuration("loop_lapse")
+	loopPeriod := v.GetDuration("loop_period")
 
 loop:
 	for timeout := time.After(loopLapse); ; {
@@ -61,20 +62,20 @@ loop:
 			break loop
 		default:
 		}
-		
-		fmt.Fprintf(conn, "This is a message from the client\n")
-		message, _ := bufio.NewReader(conn)
+
+		fmt.Fprintf(clientSocket, "This is a message from the client\n")
+		message := bufio.NewReader(clientSocket)
 		log.Infof("Message from server: %s", message)
 		time.Sleep(loopPeriod)
 	}
 
-	conn.Close()
+	clientSocket.Close()
 }
 
 func main() {
 	v, err := InitConfig()
 	if err != nil {
-		return log.Fatalf(err)
+		log.Fatalf("%s", err)
 	}
 
 	clientSocket := CreateClientSocket(v)
