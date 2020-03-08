@@ -64,15 +64,25 @@ loop:
 		}
 
 		fmt.Fprintf(clientSocket, "This is a message from the client\n")
-		message := bufio.NewReader(clientSocket)
-		log.Infof("Message from server: %s", message)
+		msg, err := bufio.NewReader(clientSocket).ReadString('\n')
+
+		if err != nil {
+			// TODO: Handle error
+			log.Errorf("Error reading from socket. Aborting.")
+			clientSocket.Close()
+			return
+		}
+
+		log.Infof("Message from server: %v", msg)
 		time.Sleep(loopPeriod)
 	}
 
+	log.Infof("Closing connection")
 	clientSocket.Close()
 }
 
 func main() {
+	time.Sleep(10)
 	v, err := InitConfig()
 	if err != nil {
 		log.Fatalf("%s", err)

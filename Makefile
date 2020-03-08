@@ -29,11 +29,11 @@ build-darwin: deps
 .PHONY: build-darwin
 
 docker-image:
-	docker build -f ./server/Dockerfile -t "$(SERVER_IMAGE_NAME):$(GIT_SHA)" .
-	docker build --build-arg GIT_REMOTE=$(GIT_REMOTE) --build-arg CLIENT_PROGRAM_NAME=$(CLIENT_PROGRAM_NAME) -f ./client/Dockerfile -t "$(CLIENT_IMAGE_NAME):$(GIT_SHA)" .
+	docker build -f ./server/Dockerfile -t "$(SERVER_IMAGE_NAME):latest" .
+	docker build --build-arg GIT_REMOTE=$(GIT_REMOTE) --build-arg CLIENT_PROGRAM_NAME=$(CLIENT_PROGRAM_NAME) -f ./client/Dockerfile -t "$(CLIENT_IMAGE_NAME):latest" .
 .PHONY: docker-image
 
-docker-compose-up:
+docker-compose-up: docker-image
 	docker-compose -f docker-compose-dev.yaml up -d --build
 .PHONY: docker-compose-up
 

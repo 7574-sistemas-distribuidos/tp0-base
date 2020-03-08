@@ -2,9 +2,7 @@ version: '3'
 services:
   server:
     container_name: server
-    build:
-      context: .
-      dockerfile: server/Dockerfile
+    image: server:latest
     environment:
       - PYTHONUNBUFFERED=1
       - SERVER_IP=server
@@ -12,14 +10,12 @@ services:
     entrypoint: python3 /server.py
 
   client:
-    container_name: consumer
-    build:
-      context: .
-      dockerfile: consumer/Dockerfile
-    entrypoint: /usr/local/bin/consumer
+    container_name: client
+    image: client:latest
+    entrypoint: /client
     environment:
-      - PYTHONUNBUFFERED=1
-      - SERVER_IP=server
-      - SERVER_PORT=12345
+      - CLI_SERVER_ADDRESS=server:12345
+      - CLI_LOOP_LAPSE=1m
+      - CLI_LOOP_PERIOD=10s
     depends_on:
       - server
