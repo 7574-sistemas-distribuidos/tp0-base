@@ -22,6 +22,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.SetEnvPrefix("cli")
 
 	// Add env variables supported
+	v.BindEnv("id")
 	v.BindEnv("server", "address")
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
@@ -45,7 +46,10 @@ func InitConfig() (*viper.Viper, error) {
 func CreateClientSocket(v *viper.Viper) net.Conn {
 	conn, err := net.Dial("tcp", v.GetString("server_address"))
 	if err != nil {
-		log.Fatalf("Could not connect to server. Error: %s", err)
+		log.Fatalf(
+			"[CLIENT %v] Could not connect to server. Error: %s",
+			v.GetString("id"),
+			err)
 	}
 	return conn
 }
@@ -54,6 +58,7 @@ func CreateClientSocket(v *viper.Viper) net.Conn {
 func StartClientLoop(v *viper.Viper, clientSocket net.Conn) {
 	loopLapse := v.GetDuration("loop_lapse")
 	loopPeriod := v.GetDuration("loop_period")
+	clientID := v.GetString("id")
 
 loop:
 	for timeout := time.After(loopLapse); ; {
@@ -63,26 +68,31 @@ loop:
 		default:
 		}
 
-		fmt.Fprintf(clientSocket, "This is a message from the client\n")
+		fmt.Fprintf(
+			clientSocket,
+			"[CLIENT %v] Message sent\n",
+			clientID,
+		)
 		msg, err := bufio.NewReader(clientSocket).ReadString('\n')
 
 		if err != nil {
-			// TODO: Handle error
-			log.Errorf("Error reading from socket. Aborting.")
+			log.Errorf(
+				"[CLIENT %v] Error reading from socket. Aborting.",
+				clientID,
+			)
 			clientSocket.Close()
 			return
 		}
 
-		log.Infof("Message from server: %v", msg)
+		log.Infof("[CLIENT %v] Message from server: %v", clientID, msg)
 		time.Sleep(loopPeriod)
 	}
 
-	log.Infof("Closing connection")
+	log.Infof("[CLIENT %v] Closing connection", clientID)
 	clientSocket.Close()
 }
 
 func main() {
-	time.Sleep(10)
 	v, err := InitConfig()
 	if err != nil {
 		log.Fatalf("%s", err)

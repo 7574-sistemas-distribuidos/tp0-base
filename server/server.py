@@ -87,7 +87,7 @@ def start_server_loop(server_sock):
 				inputs.append(c)
 			else:
 				if handle_client_connection(s):
-					inputs.remove(c)
+					inputs.remove(s)
 
 if __name__== "__main__":
 	main()

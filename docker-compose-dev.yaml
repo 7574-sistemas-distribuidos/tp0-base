@@ -9,13 +9,26 @@ services:
       - SERVER_PORT=12345
     entrypoint: python3 /server.py
 
-  client:
-    container_name: client
+  client1:
+    container_name: client1
     image: client:latest
     entrypoint: /client
     environment:
+      - CLI_ID=1
       - CLI_SERVER_ADDRESS=server:12345
       - CLI_LOOP_LAPSE=1m
       - CLI_LOOP_PERIOD=10s
+    depends_on:
+      - server
+
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
+      - CLI_SERVER_ADDRESS=server:12345
+      - CLI_LOOP_LAPSE=1m30s
+      - CLI_LOOP_PERIOD=7s
     depends_on:
       - server
