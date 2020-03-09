@@ -19,6 +19,7 @@ def parse_config_params():
 	config_params = {}
 	try:
 		config_params["port"] = int(os.environ["SERVER_PORT"])
+		config_params["listen_backlog"] = int(os.environ["SERVER_LISTEN_BACKLOG"])
 	except KeyError as e:
 		raise KeyError("Key was not found. Error: {} .Aborting server".format(e))
 	except ValueError as e:
@@ -29,23 +30,44 @@ def parse_config_params():
 def main():
 	initialize_log()
 	config_params = parse_config_params()
-	server_sock = initialize_server_socket(config_params["port"])
+	server_sock = initialize_server_socket(
+		config_params["port"],
+		config_params["listen_backlog"],
+	)
 	start_server_loop(server_sock)
 
 def initialize_log():
+	"""
+	Python custom logging initialization
+	
+	Current timestamp is added to be able to identify in docker
+	compose logs the date when the log has arrived
+	"""
 	logging.basicConfig(
 		format='%(asctime)s %(levelname)-8s %(message)s',
 		level=logging.INFO,
 		datefmt='%Y-%m-%d %H:%M:%S',
 	)
 
-def initialize_server_socket(port):
+def initialize_server_socket(port, backlog):
+	"""
+	Initialize server socket 
+
+	Server socket is initialized as a TCP stream socket.
+	"""
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.bind(('', port))
-	s.listen(5)
+	s.listen(backlog)
 	return s
 
 def accept_new_connection(server_sock):
+	"""
+	Accept new connections
+
+	Client sockets created from the connection are set as
+	nonblocking sockets to be added into the select syscall
+	to listen to messages to be received
+	"""
 	# Connection arrived
 	logging.info("Proceed to accept new connections")
 	c, addr = server_sock.accept()
@@ -59,6 +81,11 @@ def accept_new_connection(server_sock):
 	return c
 
 def handle_client_connection(client_sock):
+	"""
+	Read message from a specific client socket
+
+	If client socket is closed, return false
+	"""
 	try:
 		msg = client_sock.recv(1024)
 		logging.info(
@@ -72,6 +99,16 @@ def handle_client_connection(client_sock):
 	return False
 
 def start_server_loop(server_sock):
+	"""
+	Server loop based on select syscall
+
+	Select syscall is used to listen in the server socket. When a 
+	connection is accepted, the socket created to communicate with
+	the client will be added into the select readable list to be 
+	able to listen to both new connections and client messages in the
+	same thread
+	"""
+
 	# Sockets received by select syscall must be non blocking.
 	server_sock.setblocking(0)
 	inputs = [server_sock]
