@@ -64,27 +64,22 @@ def accept_new_connection(server_sock):
 	"""
 	Accept new connections
 
-	Client sockets created from the connection are set as
-	nonblocking sockets to be added into the select syscall
-	to listen to messages to be received
+	Function blocks until a connection to a client is made.
+	Then connection created is printed and returned
 	"""
+
 	# Connection arrived
 	logging.info("Proceed to accept new connections")
 	c, addr = server_sock.accept()
-
-	# Sockets received by select syscall must be non blocking.
-	c.setblocking(0)
-
-	# Append the socket to the select input list to detect when
-	# traffic arrives from a client
 	logging.info('Got connection from {}'.format(addr)) 
 	return c
 
 def handle_client_connection(client_sock):
 	"""
-	Read message from a specific client socket
+	Read message from a specific client socket and close the socket
 
-	If client socket is closed, return false
+	If a problem arises in the communication with the client, the 
+	client socket will also be closed
 	"""
 	try:
 		msg = client_sock.recv(1024)
@@ -93,38 +88,24 @@ def handle_client_connection(client_sock):
 				.format(client_sock.getpeername(), msg))
 		client_sock.send(b"Your Message has been received.\n")
 	except OSError:
-		logging.info("Client socket {} is closed.".format(client_sock))
+		logging.info("Error while reading socket {}".format(client_sock))
+	finally:
 		client_sock.close()
-		return True
-	return False
 
 def start_server_loop(server_sock):
 	"""
-	Server loop based on select syscall
+	Dummy Server loop
 
-	Select syscall is used to listen in the server socket. When a 
-	connection is accepted, the socket created to communicate with
-	the client will be added into the select readable list to be 
-	able to listen to both new connections and client messages in the
-	same thread
+	Server that accept a new connections and establishes a 
+	communication with a client. After client with communucation
+	finishes, servers starts to accept new connections again  
 	"""
 
-	# Sockets received by select syscall must be non blocking.
-	server_sock.setblocking(0)
-	inputs = [server_sock]
- 
-	while inputs:
-		# TODO: Select blocks until one of the sockets receives an event. 
-		# Add timeouts to handle server gracefuly quit scenario 
-		# (signal handling)
-		readable, _, _ = select.select(inputs, [], inputs)
-		for s in readable:
-			if s is server_sock:
-				c = accept_new_connection(s)
-				inputs.append(c)
-			else:
-				if handle_client_connection(s):
-					inputs.remove(s)
+	# TODO: Modify this program to handle signal to graceful shutdown
+	# the server
+	while True:
+		client_sock = accept_new_connection(server_sock)
+		handle_client_connection(client_sock)
 
 if __name__== "__main__":
 	main()

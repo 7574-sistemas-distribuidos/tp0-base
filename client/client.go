@@ -30,11 +30,17 @@ func InitConfig() (*viper.Viper, error) {
 	// Parse time.Duration variables and return an error
 	// if those variables cannot be parsed
 	if _, err := time.ParseDuration(v.GetString("loop_lapse")); err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_LAPSE env var as time.Duration.")
+		return nil, errors.Wrapf(
+			err,
+			"Could not parse CLI_LOOP_LAPSE env var as time.Duration.",
+		)
 	}
 
 	if _, err := time.ParseDuration(v.GetString("loop_period")); err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_PERIOD env var as time.Duration.")
+		return nil, errors.Wrapf(
+			err,
+			"Could not parse CLI_LOOP_PERIOD env var as time.Duration.",
+		)
 	}
 
 	return v, nil
@@ -49,25 +55,21 @@ func CreateClientSocket(v *viper.Viper) net.Conn {
 		log.Fatalf(
 			"[CLIENT %v] Could not connect to server. Error: %s",
 			v.GetString("id"),
-			err)
+			err,
+		)
 	}
 	return conn
 }
 
 // StartClientLoop Send messages to
-func StartClientLoop(v *viper.Viper, clientSocket net.Conn) {
+func StartClientLoop(v *viper.Viper) {
 	loopLapse := v.GetDuration("loop_lapse")
 	loopPeriod := v.GetDuration("loop_period")
 	clientID := v.GetString("id")
 
-loop:
-	for timeout := time.After(loopLapse); ; {
-		select {
-		case <-timeout:
-			break loop
-		default:
-		}
-
+	for start := time.Now(); time.Since(start) < loopLapse; {
+		// Create a new client socket in every for iteration
+		clientSocket := CreateClientSocket(v)
 		fmt.Fprintf(
 			clientSocket,
 			"[CLIENT %v] Message sent\n",
@@ -86,10 +88,10 @@ loop:
 
 		log.Infof("[CLIENT %v] Message from server: %v", clientID, msg)
 		time.Sleep(loopPeriod)
+		clientSocket.Close()
 	}
 
-	log.Infof("[CLIENT %v] Closing connection", clientID)
-	clientSocket.Close()
+	log.Infof("[CLIENT %v] Main loop finished", clientID)
 }
 
 func main() {
@@ -98,6 +100,5 @@ func main() {
 		log.Fatalf("%s", err)
 	}
 
-	clientSocket := CreateClientSocket(v)
-	StartClientLoop(v, clientSocket)
+	StartClientLoop(v)
 }

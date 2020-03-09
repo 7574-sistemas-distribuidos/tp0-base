@@ -20,28 +20,13 @@ services:
     environment:
       - CLI_ID=1
       - CLI_SERVER_ADDRESS=server:12345
-      - CLI_LOOP_LAPSE=1m
+      - CLI_LOOP_LAPSE=1m2s
       - CLI_LOOP_PERIOD=10s
     networks:
       testing_net:
         ipv4_address: 172.24.125.3
     depends_on:
       - server
-
-  client2:
-    container_name: client2
-    image: client:latest
-    entrypoint: /client
-    environment:
-      - CLI_ID=2
-      - CLI_SERVER_ADDRESS=server:12345
-      - CLI_LOOP_LAPSE=1m30s
-      - CLI_LOOP_PERIOD=7s
-    networks:
-      testing_net:
-        ipv4_address: 172.24.125.4
-    depends_on:
-    - server
 
 networks:
   testing_net:
