@@ -2,22 +2,50 @@ version: '3'
 services:
   server:
     container_name: server
-    build:
-      context: .
-      dockerfile: server/Dockerfile
-      environment:
-        - PYTHONUNBUFFERED=1
-        - SERVER_IP=server
-        - SERVER_PORT=12345
+    image: server:latest
     entrypoint: python3 /server.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SERVER_IP=server
+      - SERVER_PORT=12345
+      - SERVER_LISTEN_BACKLOG=5
+    networks:
+      testing_net:
+        ipv4_address: 172.24.125.2
 
-  client:
-    container_name: consumer
-    build:
-      context: .
-      dockerfile: consumer/Dockerfile
-    entrypoint: /usr/local/bin/consumer
+  client1:
+    container_name: client1
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=1
+      - CLI_SERVER_ADDRESS=server:12345
+      - CLI_LOOP_LAPSE=1m
+      - CLI_LOOP_PERIOD=10s
+    networks:
+      testing_net:
+        ipv4_address: 172.24.125.3
     depends_on:
       - server
-    links: 
-      - rabbitmq
+
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
+      - CLI_SERVER_ADDRESS=server:12345
+      - CLI_LOOP_LAPSE=1m30s
+      - CLI_LOOP_PERIOD=7s
+    networks:
+      testing_net:
+        ipv4_address: 172.24.125.4
+    depends_on:
+    - server
+
+networks:
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.24.125.0/16
