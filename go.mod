@@ -1,4 +1,4 @@
-module github.com/Ezetowers/docker-compose-init
+module github.com/7574-sistemas-distribuidos/docker-compose-init
 
 go 1.13
 
