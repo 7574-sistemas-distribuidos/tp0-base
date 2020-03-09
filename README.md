@@ -40,14 +40,22 @@ del mismo (evitar que el usuario que usa el proyecto tenga que instalar otra dep
 más que docker/docker-compose para correr el proyecto) 
 
 ## Ejercicio N°1:
-Modificar el cliente y el servidor para lograr que la configuración de ambas
-aplicaciones sea leída por tanto por variables de ambiente como 
-por archivo de configuración. (Hint: docker volumes)
+Modificar la definición del docker-compose para agregar un nuevo cliente al proyecto.
+
+## Ejercicio N°1.1 (Opcional):
+Definir un script (en el lenguaje deseado) que permita crear una definición de 
+docker-compose con N cantidad de clientes.
 
 ## Ejercicio N°2:
+Modificar el cliente y el servidor para lograr que la configuración de ambas
+aplicaciones sea leída por tanto por variables de ambiente como 
+por archivo de configuración. Configuración por archivo de configuración
+debe ser _injectada_ al ejemplo y persistida afuera del mismo. (Hint: docker volumes)
+
+## Ejercicio N°3:
 Crear un script que permita conectarse con el servidor utilizando el comando netcat.
 Netcat no debe ser instalado en la maquina y no se puede exponer puertos del 
-servidor. (Hint: docker network)
+servidor para realizar la comunicación. (Hint: docker network)
 
 
 
