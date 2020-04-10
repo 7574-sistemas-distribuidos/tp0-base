@@ -3,7 +3,7 @@ services:
   server:
     container_name: server
     image: server:latest
-    entrypoint: python3 /server.py
+    entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
       - SERVER_IP=server
