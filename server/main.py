@@ -3,7 +3,7 @@
 import os
 import time
 import logging
-from server import Server
+from common.server import Server
 
 
 def parse_config_params():

@@ -26,18 +26,17 @@ class Server:
 
     def __handle_client_connection(self, client_sock):
         """
-        Read message from a specific client socket and close the socket
+        Read message from a specific client socket and closes the socket
 
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
         try:
-            msg = client_sock.recv(1024)
+            msg = client_sock.recv(1024).rstrip()
             logging.info(
                 'Message received from connection {}. Msg: {}'
                     .format(client_sock.getpeername(), msg))
-
-            client_sock.send(b"Your Message has been received.\n")
+            client_sock.send("Your Message has been received: {}\n".format(msg).encode('utf-8'))
         except OSError:
             logging.info("Error while reading socket {}".format(client_sock))
         finally:

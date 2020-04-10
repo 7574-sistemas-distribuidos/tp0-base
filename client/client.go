@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -67,16 +68,20 @@ func StartClientLoop(v *viper.Viper) {
 	loopPeriod := v.GetDuration("loop_period")
 	clientID := v.GetString("id")
 
+	msgID := 1
 	for start := time.Now(); time.Since(start) < loopLapse; {
 		// Create a new client socket in every for iteration
 		clientSocket := CreateClientSocket(v)
 		fmt.Fprintf(
 			clientSocket,
-			"[CLIENT %v] Message sent\n",
+			"[CLIENT %v] Message number %v sent\n",
 			clientID,
+			msgID,
 		)
-		msg, err := bufio.NewReader(clientSocket).ReadString('\n')
+		msgID++
 
+		msg, err := bufio.NewReader(clientSocket).ReadString('\n')
+		msg = strings.TrimSuffix(msg, "\n")
 		if err != nil {
 			log.Errorf(
 				"[CLIENT %v] Error reading from socket. Aborting.",
