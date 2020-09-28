@@ -10,8 +10,7 @@ services:
       - SERVER_PORT=12345
       - SERVER_LISTEN_BACKLOG=5
     networks:
-      testing_net:
-        ipv4_address: 172.24.125.2
+      - testing_net
 
   client1:
     container_name: client1
@@ -23,8 +22,7 @@ services:
       - CLI_LOOP_LAPSE=1m2s
       - CLI_LOOP_PERIOD=10s
     networks:
-      testing_net:
-        ipv4_address: 172.24.125.3
+      - testing_net
     depends_on:
       - server
 
@@ -33,4 +31,4 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.24.125.0/16
+        - subnet: 172.25.125.0/24
