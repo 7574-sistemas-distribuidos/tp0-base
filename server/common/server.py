@@ -36,7 +36,7 @@ class Server:
             logging.info(
                 'Message received from connection {}. Msg: {}'
                 .format(client_sock.getpeername(), msg))
-            client_sock.send("Your Message has been received: {}".format(msg).encode('utf-8'))
+            client_sock.send("Your Message has been received: {}\n".format(msg).encode('utf-8'))
         except OSError:
             logging.info("Error while reading socket {}".format(client_sock))
         finally:
