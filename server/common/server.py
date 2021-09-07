@@ -1,6 +1,7 @@
 import socket
 import logging
 
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -23,7 +24,6 @@ class Server:
             client_sock = self.__accept_new_connection()
             self.__handle_client_connection(client_sock)
 
-
     def __handle_client_connection(self, client_sock):
         """
         Read message from a specific client socket and closes the socket
@@ -32,16 +32,15 @@ class Server:
         client socket will also be closed
         """
         try:
-            msg = client_sock.recv(1024).rstrip()
+            msg = client_sock.recv(1024).rstrip().decode('utf-8')
             logging.info(
                 'Message received from connection {}. Msg: {}'
-                    .format(client_sock.getpeername(), msg))
-            client_sock.send("Your Message has been received: {}\n".format(msg).encode('utf-8'))
+                .format(client_sock.getpeername(), msg))
+            client_sock.send("Your Message has been received: {}".format(msg).encode('utf-8'))
         except OSError:
             logging.info("Error while reading socket {}".format(client_sock))
         finally:
             client_sock.close()
-
 
     def __accept_new_connection(self):
         """
