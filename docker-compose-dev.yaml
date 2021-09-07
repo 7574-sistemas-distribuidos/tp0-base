@@ -20,7 +20,6 @@ services:
       - CLI_ID=1
       - CLI_SERVER_ADDRESS=server:12345
       - CLI_LOOP_LAPSE=1m2s
-      # - CLI_LOOP_PERIOD=10s
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
