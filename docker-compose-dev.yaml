@@ -26,6 +26,20 @@ services:
     depends_on:
       - server
 
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
+      - CLI_SERVER_ADDRESS=server:12345
+      - CLI_LOOP_LAPSE=1m2s
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
 networks:
   testing_net:
     ipam:
