@@ -1,0 +1,48 @@
+version: "3"
+services:
+  server:
+    container_name: server
+    image: server:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SERVER_PORT=12345
+      - SERVER_LISTEN_BACKLOG=7
+      - LOGGING_LEVEL=DEBUG
+    networks:
+      - testing_net
+
+client1:
+  container_name: client1
+  image: client:latest
+  entrypoint: /client
+  environment:
+    - CLI_ID=1
+    - CLI_SERVER_ADDRESS=server:12345
+    - CLI_LOOP_LAPSE=1m2s
+    - CLI_LOG_LEVEL=INFO
+  networks:
+    - testing_net
+  depends_on:
+    - server
+
+client2:
+  container_name: client2
+  image: client:latest
+  entrypoint: /client
+  environment:
+    - CLI_ID=2
+    - CLI_SERVER_ADDRESS=server:12345
+    - CLI_LOOP_LAPSE=1m2s
+    - CLI_LOG_LEVEL=INFO
+  networks:
+    - testing_net
+  depends_on:
+    - server
+
+networks:
+testing_net:
+  ipam:
+    driver: default
+    config:
+      - subnet: 172.25.125.0/24
