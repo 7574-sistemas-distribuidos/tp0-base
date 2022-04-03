@@ -56,11 +56,11 @@ services:
     done
 
 	printf 'networks:
-testing_net:
-  ipam:
-    driver: default
-    config:
-      - subnet: 172.25.125.0/24'
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24'
 } > docker-compose-multipleClients.yaml
 
 echo -e "${GREEN}[SUCCESS]${NC} Docker compose creation successful"
