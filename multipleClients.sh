@@ -20,19 +20,19 @@ done
 
 
 add_client () {
-	printf 'client'${1}':
-  container_name: client'${1}'
-  image: client:latest
-  entrypoint: /client
-  environment:
-    - CLI_ID='${1}'
-    - CLI_SERVER_ADDRESS=server:12345
-    - CLI_LOOP_LAPSE=1m2s
-    - CLI_LOG_LEVEL='${2}'
-  networks:
-    - testing_net
-  depends_on:
-    - server\n\n'
+	printf '  client'${1}':
+    container_name: client'${1}'
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID='${1}'
+      - CLI_SERVER_ADDRESS=server:12345
+      - CLI_LOOP_LAPSE=1m2s
+      - CLI_LOG_LEVEL='${2}'
+    networks:
+      - testing_net
+    depends_on:
+      - server\n\n'
 }
 
 {
@@ -61,6 +61,6 @@ services:
       driver: default
       config:
         - subnet: 172.25.125.0/24'
-} > docker-compose-multipleClients.yaml
+} > docker-compose-dev.yaml
 
 echo -e "${GREEN}[SUCCESS]${NC} Docker compose creation successful"
