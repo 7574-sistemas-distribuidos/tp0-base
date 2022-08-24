@@ -1,47 +1,30 @@
 # TP0: Docker + Comunicación + Sincronización
 
-En el presente repositorio se provee un ejemplo de cliente-servidor el cual corre en containers
-con la ayuda de [docker-compose](https://docs.docker.com/compose/). El mismo es un ejemplo práctico brindado por la cátedra para que los alumnos tengan un esqueleto básico de cómo armar un proyecto de cero en donde todas las dependencias del mismo se encuentren encapsuladas en containers.
+En el presente repositorio se provee un ejemplo de cliente-servidor el cual corre en containers con la ayuda de [docker-compose](https://docs.docker.com/compose/). El mismo es un ejemplo práctico brindado por la cátedra para que los alumnos tengan un esqueleto básico de cómo armar un proyecto de cero en donde todas las dependencias del mismo se encuentren encapsuladas en containers. El cliente (Golang) y el servidor (Python) fueron desarrollados en diferentes lenguajes simplemente para mostrar cómo dos lenguajes de programación pueden convivir en el mismo proyecto con la ayuda de containers.
 
-El cliente (Golang) y el servidor (Python) fueron desarrollados en diferentes
-lenguajes simplemente para mostrar cómo dos lenguajes de programación pueden
-convivir en el mismo proyecto con la ayuda de containers.
+Por otro lado, se presenta una guía de ejercicios que los alumnos deberán resolver teniendo en cuenta las consideraciones generales descriptas al pie de este archivo.
 
 ## Instrucciones de uso
-El repositorio cuenta con un **Makefile** que posee encapsulado diferentes comandos
-utilizados recurrentemente en el proyecto en forma de targets. Los targets se ejecutan mediante la invocación de:
+El repositorio cuenta con un **Makefile** que posee encapsulado diferentes comandos utilizados recurrentemente en el proyecto en forma de targets. Los targets se ejecutan mediante la invocación de:
 
 * **make \<target\>**
-El target principal a utilizar es **docker-compose-up** el cual permite inicializar
-el ambiente de desarrollo (buildear docker images del servidor y client, inicializar
-la red a utilizar por docker, etc.) y arrancar los containers de las aplicaciones
-que componen el proyecto.
-
+El target principal a utilizar es **docker-compose-up** el cual permite inicializar el ambiente de desarrollo (buildear docker images del servidor y client, inicializar la red a utilizar por docker, etc.) y arrancar los containers de las aplicaciones que componen el proyecto.
 
 Los targets disponibles son:
 * **docker-compose-up**: Inicializa el ambiente de desarrollo (buildear docker images del servidor y client, inicializar la red a utilizar por docker, etc.) y arranca los containers de las aplicaciones que componen el proyecto.
-* **docker-compose-down**: Realiza un `docker-compose stop` para detener los containers
-asociados al compose y luego realiza un `docker-compose down` para destruir todos los
-recursos asociados al proyecto que fueron inicializados. Se recomienda ejecutar este comando al finalizar cada ejecución para evitar que el disco de la máquina host se llene.
-* **docker-compose-logs**: Permite ver los logs actuales del proyecto. Acompañar con grep
-para lograr ver mensajes de una aplicación específica dentro del compose.
-* **docker-image**: Buildea las imágenes a ser utilizadas tanto en el client como el server.
-Este target es utilizado por **docker-compose-up**, por lo cual se lo puede utilizar para
-testear nuevos cambios en las imágenes antes de arrancar el proyecto.
-* **build**: Compila la aplicación cliente en el host en lugar de Docker. La compilación
-de esta forma es mucho más rápida pero requiere tener el entorno de Golang instalado en la
-máquina.
+* **docker-compose-down**: Realiza un `docker-compose stop` para detener los containers asociados al compose y luego realiza un `docker-compose down` para destruir todos los recursos asociados al proyecto que fueron inicializados. Se recomienda ejecutar este comando al finalizar cada ejecución para evitar que el disco de la máquina host se llene.
+* **docker-compose-logs**: Permite ver los logs actuales del proyecto. Acompañar con grep para lograr ver mensajes de una aplicación específica dentro del compose.
+* **docker-image**: Buildea las imágenes a ser utilizadas tanto en el client como el server. Este target es utilizado por **docker-compose-up**, por lo cual se lo puede utilizar para testear nuevos cambios en las imágenes antes de arrancar el proyecto.
+* **build**: Compila la aplicación cliente en el host en lugar de Docker. La compilación de esta forma es mucho más rápida pero requiere tener el entorno de Golang instalado en la máquina.
 
 ### Servidor
-El servidor del presente ejemplo es un EchoServer: los mensajes recibidos por el cliente
-son devueltos inmediatamente. El servidor actual funciona de la siguiente forma:
+El servidor del presente ejemplo es un EchoServer: los mensajes recibidos por el cliente son devueltos inmediatamente. El servidor actual funciona de la siguiente forma:
 1. Servidor acepta una nueva conexión.
 2. Servidor recibe mensaje del cliente y procede a responder el mismo.
 3. Servidor desconecta al cliente.
 4. Servidor procede a recibir una conexión nuevamente.
 
-Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego
-el comando `make docker-compose-logs`, se observan los siguientes logs:
+Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego el comando `make docker-compose-logs`, se observan los siguientes logs:
 
 ```
 efeyuk@Helena:~/Development/tp0-base$ make docker-compose-logs
@@ -110,4 +93,4 @@ Agregar en los clientes una consulta por el número total de ganadores de todas 
 En caso de que alguna agencia consulte a la central antes de que esta haya completado el procesamiento de las demás, deberá recibir una respuesta parcial con el número de agencias que aún no hayan finalizado su carga de datos y volver a consultar tras N segundos.
 
 ## Consideraciones Generales
-Se espera que los alumnos realicen un fork del presente repositorio para el desarrollo de los ejercicios, el cual deberá contar con un README que explique cómo correr cada uno de estos. Para la segunda parte del TP también será necesario una sección donde se explique el protocolo de comunicación implementado y los mecanismos de sincronización utilizado en el último ejercicio. Finalmente, se pide a los alumnos leer atentamente y **tener en cuenta** los criterios de corrección provistos [en el campus](https://campus.fi.uba.ar/course/view.php?id=761).
+Se espera que los alumnos realicen un fork del presente repositorio para el desarrollo de los ejercicios, el cual deberá contar con un README que explique cómo correr cada uno de estos. Para la segunda parte del TP también será necesaria una sección donde se explique el protocolo de comunicación implementado y los mecanismos de sincronización utilizado en el último ejercicio. Finalmente, se pide a los alumnos leer atentamente y **tener en cuenta** los criterios de corrección provistos [en el campus](https://campus.fi.uba.ar/course/view.php?id=761).
