@@ -75,9 +75,10 @@ Modificar la lógica de negocio tanto de los clientes como del servidor para nue
 Por el lado de los clientes (quienes emularán _agencias de quiniela_) deberán recibir como variables de entorno los siguientes datos de una persona: nombre, apellido, documento y fecha de nacimiento. Dichos datos deberán ser enviados al servidor para saber si corresponden a los de un ganador, información que deberá loguearse. Por el lado del servidor (que emulará la _central de Lotería Nacional_), deberán recibirse los datos enviados desde los clientes y analizar si corresponden a los de un ganador utilizando la función provista `is_winner(...)`, para luego responderles.
 
 Deberá implementarse un módulo de comunicación entre el cliente y el servidor donde se maneje el envío y la recepción de los paquetes, el cual se espera que contemple:
-* Marshalling de los datos.
+* Serialización de los datos.
 * Definición de un protocolo para el envío de los mensajes.
 * Correcto encapsulamiento entre el modelo de dominio y la capa de transmisión.
+* Empleo correcto de sockets, incluyendo manejo de errores y evitando el fenómeno conocido como _short-read_.
 
 ### Ejercicio N°6:
 Modificar los clientes para que levanten los datos de los participantes desde los datasets provistos en los archivos de prueba en lugar de las variables de entorno. Cada cliente deberá consultar por todas las personas de un mismo set (los cuales representan a los jugadores de cada agencia) en forma de batch, de manera de poder hacer varias consultas en un solo request. El servidor por otro lado deberá responder con los datos de todos los ganadores del batch, y cada cliente al finalizar las consultas deberá loguear el porcentaje final de jugadores que hayan ganado en su agencia.
@@ -88,7 +89,7 @@ Modificar el servidor actual para que el mismo permita procesar mensajes y acept
 En caso de que el alumno desee implementar un nuevo servidor en Python,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
 
 ### Ejercicio N°8:
-Agregar en los clientes una consulta por el número total de ganadores de todas las agencias, así como también el Top 3 de agencias con más ganadores. Así mismo se deberá modificar el servidor para poder llevar el trackeo de dicha información.
+Agregar en los clientes una consulta por el número total de ganadores de todas las agencias, por lo cual se deberá modificar el servidor para poder llevar el trackeo de dicha información.
 
 En caso de que alguna agencia consulte a la central antes de que esta haya completado el procesamiento de las demás, deberá recibir una respuesta parcial con el número de agencias que aún no hayan finalizado su carga de datos y volver a consultar tras N segundos.
 
