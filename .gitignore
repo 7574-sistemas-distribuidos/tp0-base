@@ -3,3 +3,6 @@
 
 # Executables
 bin/
+
+# Environment variables
+.env
