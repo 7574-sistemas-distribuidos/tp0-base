@@ -1,4 +1,5 @@
-version: '3'
+version: '3.9'
+name: tp0
 services:
   server:
     container_name: server
