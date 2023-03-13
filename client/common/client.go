@@ -50,29 +50,31 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	// Create the connection the server in every loop iteration. Send an
 	// autoincremental msgID to identify every message sent
-	c.createClientSocket()
 	msgID := 1
 
 loop:
-	// Send messages if the loopLapse threshold has been not surpassed
+	// Send messages if the loopLapse threshold has not been surpassed
 	for timeout := time.After(c.config.LoopLapse); ; {
 		select {
 		case <-timeout:
+	        log.Infof("[CLIENT %v] Loop timeout detected", c.config.ID)
 			break loop
 		default:
 		}
 
+		// Create the connection the server in every loop iteration. Send an
+		c.createClientSocket()
 		// Send
 		fmt.Fprintf(
 			c.conn,
-			"[CLIENT %v] Message N°%v sent\n",
+			"[CLIENT %v] Message N°%v\n",
 			c.config.ID,
 			msgID,
 		)
 		msg, err := bufio.NewReader(c.conn).ReadString('\n')
 		msgID++
+		c.conn.Close()
 
 		if err != nil {
 			log.Errorf(
@@ -80,19 +82,13 @@ loop:
 				c.config.ID,
 				err,
 			)
-			c.conn.Close()
 			return
 		}
-		log.Infof("[CLIENT %v] Message from server: %v", c.config.ID, msg)
+		log.Infof("[CLIENT %v] Response from server: %v", c.config.ID, msg)
 
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
-
-		// Recreate connection to the server
-		c.conn.Close()
-		c.createClientSocket()
 	}
 
-	log.Infof("[CLIENT %v] Closing connection", c.config.ID)
-	c.conn.Close()
+	log.Infof("[CLIENT %v] Client loop finished", c.config.ID)
 }
