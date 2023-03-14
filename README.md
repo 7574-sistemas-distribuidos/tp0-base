@@ -1,4 +1,4 @@
-# TP0: Docker + Comunicación + Sincronización
+# TP0: Docker + Comunicaciones + Concurrencia
 
 En el presente repositorio se provee un ejemplo de cliente-servidor el cual corre en containers con la ayuda de [docker-compose](https://docs.docker.com/compose/). El mismo es un ejemplo práctico brindado por la cátedra para que los alumnos tengan un esqueleto básico de cómo armar un proyecto de cero en donde todas las dependencias del mismo se encuentren encapsuladas en containers. El cliente (Golang) y el servidor (Python) fueron desarrollados en diferentes lenguajes simplemente para mostrar cómo dos lenguajes de programación pueden convivir en el mismo proyecto con la ayuda de containers.
 
@@ -38,32 +38,27 @@ Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del 
 ```
 $ make docker-compose-logs 
 docker compose -f docker-compose-dev.yaml logs -f
-server   | 2023-03-13 03:07:24 DEBUG    Server configuration: {'port': 12345, 'listen_backlog': 5, 'logging_level': 'DEBUG'}
-server   | 2023-03-13 03:07:24 INFO     Proceed to accept new connections
-server   | 2023-03-13 03:07:24 INFO     Got connection from ('172.25.125.3', 59318)
-server   | 2023-03-13 03:07:24 INFO     Message received from connection ('172.25.125.3', 59318). Msg: [CLIENT 1] Message N°1
-client1  | time="2023-03-13T03:07:24Z" level=info msg="Client configuration"
-server   | 2023-03-13 03:07:24 INFO     Proceed to accept new connections
-client1  | time="2023-03-13T03:07:24Z" level=info msg="Client ID: 1"
-client1  | time="2023-03-13T03:07:24Z" level=info msg="Server Address: server:12345"
-client1  | time="2023-03-13T03:07:24Z" level=info msg="Loop Lapse: 20s"
-client1  | time="2023-03-13T03:07:24Z" level=info msg="Loop Period: 5s"
-client1  | time="2023-03-13T03:07:24Z" level=info msg="Log Level: DEBUG"
-client1  | time="2023-03-13T03:07:24Z" level=info msg="[CLIENT 1] Response from server: Your Message has been received: [CLIENT 1] Message N°1\n"
-server   | 2023-03-13 03:07:29 INFO     Got connection from ('172.25.125.3', 59324)
-server   | 2023-03-13 03:07:29 INFO     Message received from connection ('172.25.125.3', 59324). Msg: [CLIENT 1] Message N°2
-server   | 2023-03-13 03:07:29 INFO     Proceed to accept new connections
-client1  | time="2023-03-13T03:07:29Z" level=info msg="[CLIENT 1] Response from server: Your Message has been received: [CLIENT 1] Message N°2\n"
-server   | 2023-03-13 03:07:34 INFO     Got connection from ('172.25.125.3', 56502)
-server   | 2023-03-13 03:07:34 INFO     Message received from connection ('172.25.125.3', 56502). Msg: [CLIENT 1] Message N°3
-server   | 2023-03-13 03:07:34 INFO     Proceed to accept new connections
-client1  | time="2023-03-13T03:07:34Z" level=info msg="[CLIENT 1] Response from server: Your Message has been received: [CLIENT 1] Message N°3\n"
-server   | 2023-03-13 03:07:39 INFO     Got connection from ('172.25.125.3', 56512)
-server   | 2023-03-13 03:07:39 INFO     Message received from connection ('172.25.125.3', 56512). Msg: [CLIENT 1] Message N°4
-client1  | time="2023-03-13T03:07:39Z" level=info msg="[CLIENT 1] Response from server: Your Message has been received: [CLIENT 1] Message N°4\n"
-server   | 2023-03-13 03:07:39 INFO     Proceed to accept new connections
-client1  | time="2023-03-13T03:07:44Z" level=info msg="[CLIENT 1] Loop timeout detected"
-client1  | time="2023-03-13T03:07:44Z" level=info msg="[CLIENT 1] Client loop finished"
+server   | 2023-03-13 03:07:24 DEBUG    action: config | result: success | port: 12345 | listen_backlog: 5 | logging_level: DEBUG
+server   | 2023-03-13 03:07:24 INFO     action: accept_connections | result: in_progress
+server   | 2023-03-13 03:07:24 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 59318
+server   | 2023-03-13 03:07:24 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 59318 | msg: [CLIENT 1] Message N°1
+client1  | time="2023-03-13T03:07:24Z" level=info action: config | result: success | client_id: 1 | server_address: server:12345 | loop_lapse: 20s | loop_period: 5s | log_level: DEBUG
+server   | 2023-03-13 03:07:24 INFO     action: accept_connections | result: in_progress
+client1  | time="2023-03-13T03:07:24Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°1
+server   | 2023-03-13 03:07:29 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 59319
+server   | 2023-03-13 03:07:29 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 59319 | msg: [CLIENT 1] Message N°2
+server   | 2023-03-13 03:07:29 INFO     action: accept_connections | result: in_progress
+client1  | time="2023-03-13T03:07:29Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°2
+server   | 2023-03-13 03:07:34 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 56502
+server   | 2023-03-13 03:07:34 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 56502 | msg: [CLIENT 1] Message N°3
+server   | 2023-03-13 03:07:34 INFO     action: accept_connections | result: in_progress
+client1  | time="2023-03-13T03:07:34Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°3
+server   | 2023-03-13 03:07:39 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 56512
+server   | 2023-03-13 03:07:39 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 56512 | msg: [CLIENT 1] Message N°4
+client1  | time="2023-03-13T03:07:39Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°4
+server   | 2023-03-13 03:07:39 INFO     action: accept_connections | result: in_progress
+client1  | time="2023-03-13T03:07:44Z" level=info action: timeout_detected | result: success
+client1  | time="2023-03-13T03:07:44Z" level=info action: loop_finished | result: success
 client1 exited with code 0
 ```
 
@@ -85,47 +80,56 @@ Crear un script que permita testear el correcto funcionamiento del servidor util
 ### Ejercicio N°4:
 Modificar servidor y cliente para que ambos sistemas terminen de forma _graceful_ al recibir la signal SIGTERM. Terminar la aplicación de forma _graceful_ implica que todos los _file descriptors_ (entre los que se encuentran archivos, sockets, threads y procesos) deben cerrarse correctamente antes que el thread de la aplicación principal muera. Loguear mensajes en el cierre de cada recurso (hint: Verificar que hace el flag `-t` utilizado en el comando `docker compose down`).
 
-## Parte 2: Repaso de Comunicación y Sincronización
+## Parte 2: Repaso de Comunicaciones
 
-En esta segunda parte del trabajo práctico se plantea un caso de uso denominado **Lotería Nacional** descompuesto en tres ejercicios. Para la resolución de los mismos deberán utilizarse como base tanto los clientes como el servidor introducidos en la primera parte, con las modificaciones agregadas en el quinto ejercicio.
+Las secciones de repaso del trabajo práctico plantean un caso de uso denominado **Lotería Nacional**. Para la resolución de las mismas deberá utilizarse como base al código fuente provisto en la primera parte, con las modificaciones agregadas en el ejercicio 4.
 
 ### Ejercicio N°5:
-Modificar la lógica de negocio tanto de los clientes como del servidor para nuestro nuevo caso de uso. 
+Modificar la lógica de negocio tanto de los clientes como del servidor para nuestro nuevo caso de uso.
 
-#### Clientes
-Emularán a las 5 _agencias de quiniela_ que participan del proyecto. Deberán recibir como variables de entorno los campos que representan el registro de una persona: nombre, apellido, documento y fecha de nacimiento. Ej.: `NOMBRE=Santiago Lionel`, `APELLIDO=Lorca`, `DOCUMENTO=30904465` y `NACIMIENTO=1999-03-17` respectivamente.
+#### Cliente
+Emulará a una _agencia de quiniela_ que participa del proyecto. Existen 5 agencias. Deberán recibir como variables de entorno los campos que representan la apuesta de una persona: nombre, apellido, DNI, nacimiento, numero apostado (en adelante 'número'). Ej.: `NOMBRE=Santiago Lionel`, `APELLIDO=Lorca`, `DOCUMENTO=30904465`, `NACIMIENTO=1999-03-17` y `NUMERO=7574` respectivamente.
 
-Los campos deben enviarse al servidor para determinar si corresponden a un ganador. Al recibir la respuesta se debe imprimir por log el documento y el resultado obtenido.
+Los campos deben enviarse al servidor para dejar registro de la apuesta. Al recibir la confirmación del servidor se debe imprimir por log: 'action: apuesta_enviada | result: success | dni: ${DNI} | numero: ${NUMERO}'.
 
 #### Servidor
-Emulará a la _central de Lotería Nacional_. Deberán recibirse los campos enviados desde los clientes para analizar si corresponden a los de un ganador utilizando la función `is_winner(...)`, para luego responderles. La función `is_winner(...)` es provista por la cátedra y no podrá ser modificada por el alumno.
+Emulará a la _central de Lotería Nacional_. Deberá recibir los campos de la cada apuesta desde los clientes y almacenar la información mediante la función `store_bet(...)` para control futuro de ganadores. La función `store_bet(...)` es provista por la cátedra y no podrá ser modificada por el alumno.
+Al persistir se debe imprimir por log: 'action: apuesta_almacenada | result: success | dni: ${DNI} | numero: ${NUMERO}'.
 
 #### Comunicación:
 Se deberá implementar un módulo de comunicación entre el cliente y el servidor donde se maneje el envío y la recepción de los paquetes, el cual se espera que contemple:
-* Serialización de los datos.
 * Definición de un protocolo para el envío de los mensajes.
-* Correcto encapsulamiento entre el modelo de dominio y la capa de transmisión.
-* Empleo correcto de sockets, incluyendo manejo de errores y evitando los fenómenos conocidos como [_short read y short write_](https://cs61.seas.harvard.edu/site/2018/FileDescriptors/).
-* Garantizar un límite máximo de paquete de 8kB.
+* Serialización de los datos.
+* Correcta separación de responsabilidades entre modelo de dominio y capa de comunicación.
+* Correcto empleo de sockets, incluyendo manejo de errores y evitando los fenómenos conocidos como [_short read y short write_](https://cs61.seas.harvard.edu/site/2018/FileDescriptors/).
+* Límite máximo de paquete garantizado en 8kB.
 
 ### Ejercicio N°6:
-Modificar los clientes para que envíen varios registros de personas a la vez (modalidad conocida como procesamiento por _chunks_ o _batchs_). La información de cada de las 5 agencias será simulada por la ingesta de su archivo numerado correspondiente, provisto por la cátedra dentro de `.data/datasets.zip`.
-Los _batchs_ de personas deben permitir que el cliente resuelva el estado de varias personas en una misma consulta, acortando tiempos de transmisión y procesamiento.
-El servidor, por otro lado, deberá responder con una lista que indique el estado de todas las personas incluidas en la consulta.
-Al finalizar, el cliente deberá imprimir por log el porcentaje total de jugadores que hayan ganado en su agencia.
+Modificar los clientes para que envíen varias apuestas a la vez (modalidad conocida como procesamiento por _chunks_ o _batchs_). La información de cada agencia será simulada por la ingesta de su archivo numerado correspondiente, provisto por la cátedra dentro de `.data/datasets.zip`.
+Los _batchs_ permiten que el cliente registre varias apuestas en una misma consulta, acortando tiempos de transmisión y procesamiento.
+El servidor, por otro lado, deberá responder con éxito si todas las apuestas del _batch_ fueron procesadas correctamente.
 
 ### Ejercicio N°7:
-Modificar el servidor actual para que el mismo permita aceptar nuevas conexiones y procesar mensajes en paralelo.
-Además, deberá persistir la información de los ganadores utilizando la función `persist_winners(...)`. La función `persist_winners` es provista por la cátedra y no podrá ser modificada por el alumno.
-En este ejercicio es importante considerar los mecanismos de sincronización a utilizar para el correcto funcionamiento de la persistencia.
+Modificar los clientes para que notifiquen al servidor al finalizar con el envío de todas las apuestas y así proceder con el sorteo.
+Inmediatamente después de la notificacion, los clientes consultarán la lista de ganadores del sorteo correspondientes a su agencia.
+El cliente deberá imprimir por log: 'action: consulta_ganadores | result: success | cant_ganadores: ${CANT}'.
 
-En caso de que el alumno implemente el servidor Python,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
+El servidor deberá esperar la notificación de las 5 agencias para considerar que se realizó el sorteo e imprimir por log: 'action: sorteo | result: success'.
+Luego de este evento, podrá verificar cada apuesta con la función `has_won(...)` y retornar los DNI de los ganadores de la agencia en cuestión. Antes del sorteo, no podrá responder consultas por la lista de ganadores.
+La función `has_won(...)` es provista por la cátedra y no podrá ser modificada por el alumno.
+
+## Parte 3: Repaso de Concurrencia
 
 ### Ejercicio N°8:
-Modificar los clientes agregando al final una nueva consulta por el número total de ganadores de todas las agencias.
-El servidor deberá ser modificado para contabilizar la cantidad total de ganadores efectivamente almacenados mediante `persist_winners(...)` al momento de recibir la consulta.
+Modificar el servidor para que el mismo permita aceptar conexiones y procesar mensajes en paralelo.
+En este ejercicio es importante considerar los mecanismos de sincronización a utilizar para el correcto funcionamiento de la persistencia.
 
-En caso de que alguna agencia consulte a la central antes de que esta haya completado el procesamiento de las demás, recibirá la cantidad parcial conocida por el servidor en dicho momento.
+En caso de que el alumno implemente el servidor Python utilizando _multithreading_,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
 
 ## Consideraciones Generales
-Se espera que los alumnos realicen un fork del presente repositorio para el desarrollo de los ejercicios, el cual deberá contar con un README que explique cómo correr cada uno de estos. Para la segunda parte del TP también será necesaria una sección donde se explique el protocolo de comunicación implementado y los mecanismos de sincronización utilizado en el último ejercicio. Finalmente, se pide a los alumnos leer atentamente y **tener en cuenta** los criterios de corrección provistos [en el campus](https://campusgrado.fi.uba.ar/mod/page/view.php?id=73393).
+Se espera que los alumnos realicen un _fork_ del presente repositorio para el desarrollo de los ejercicios.
+El _fork_ deberá contar con una sección de README que indique como ejecutar cada ejercicio.
+La Parte 2 requiere una sección donde se explique el protocolo de comunicación implementado.
+La Parte 3 requiere una sección que expliquen los mecanismos de sincronización utilizados.
+
+Finalmente, se pide a los alumnos leer atentamente y **tener en cuenta** los criterios de corrección provistos [en el campus](https://campusgrado.fi.uba.ar/mod/page/view.php?id=73393).
