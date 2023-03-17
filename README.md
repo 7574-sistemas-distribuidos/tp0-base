@@ -36,29 +36,29 @@ Servidor desconecta al cliente.
 Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego el comando `make docker-compose-logs`, se observan los siguientes logs:
 
 ```
-$ make docker-compose-logs 
+$ make docker-compose-logs
 docker compose -f docker-compose-dev.yaml logs -f
-server   | 2023-03-13 03:07:24 DEBUG    action: config | result: success | port: 12345 | listen_backlog: 5 | logging_level: DEBUG
-server   | 2023-03-13 03:07:24 INFO     action: accept_connections | result: in_progress
-server   | 2023-03-13 03:07:24 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 59318
-server   | 2023-03-13 03:07:24 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 59318 | msg: [CLIENT 1] Message N°1
-client1  | time="2023-03-13T03:07:24Z" level=info action: config | result: success | client_id: 1 | server_address: server:12345 | loop_lapse: 20s | loop_period: 5s | log_level: DEBUG
-server   | 2023-03-13 03:07:24 INFO     action: accept_connections | result: in_progress
-client1  | time="2023-03-13T03:07:24Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°1
-server   | 2023-03-13 03:07:29 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 59319
-server   | 2023-03-13 03:07:29 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 59319 | msg: [CLIENT 1] Message N°2
-server   | 2023-03-13 03:07:29 INFO     action: accept_connections | result: in_progress
-client1  | time="2023-03-13T03:07:29Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°2
-server   | 2023-03-13 03:07:34 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 56502
-server   | 2023-03-13 03:07:34 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 56502 | msg: [CLIENT 1] Message N°3
-server   | 2023-03-13 03:07:34 INFO     action: accept_connections | result: in_progress
-client1  | time="2023-03-13T03:07:34Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°3
-server   | 2023-03-13 03:07:39 INFO     action: accept_connections | result: success | ip: 172.25.125.3 | port: 56512
-server   | 2023-03-13 03:07:39 INFO     action: receive_message | result: success | ip: 172.25.125.3 | port: 56512 | msg: [CLIENT 1] Message N°4
-client1  | time="2023-03-13T03:07:39Z" level=info action: receive_message | result: success | msg: Message received [CLIENT 1] Message N°4
-server   | 2023-03-13 03:07:39 INFO     action: accept_connections | result: in_progress
-client1  | time="2023-03-13T03:07:44Z" level=info action: timeout_detected | result: success
-client1  | time="2023-03-13T03:07:44Z" level=info action: loop_finished | result: success
+client1  | time="2023-03-17 04:36:59" level=info msg="action: config | result: success | client_id: 1 | server_address: server:12345 | loop_lapse: 20s | loop_period: 5s | log_level: DEBUG"
+client1  | time="2023-03-17 04:36:59" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°1\n"
+server   | 2023-03-17 04:36:59 DEBUG    action: config | result: success | port: 12345 | listen_backlog: 5 | logging_level: DEBUG
+server   | 2023-03-17 04:36:59 INFO     action: accept_connections | result: in_progress
+server   | 2023-03-17 04:36:59 INFO     action: accept_connections | result: success | ip: 172.25.125.3
+server   | 2023-03-17 04:36:59 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°1
+server   | 2023-03-17 04:36:59 INFO     action: accept_connections | result: in_progress
+server   | 2023-03-17 04:37:04 INFO     action: accept_connections | result: success | ip: 172.25.125.3
+server   | 2023-03-17 04:37:04 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°2
+server   | 2023-03-17 04:37:04 INFO     action: accept_connections | result: in_progress
+client1  | time="2023-03-17 04:37:04" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°2\n"
+server   | 2023-03-17 04:37:09 INFO     action: accept_connections | result: success | ip: 172.25.125.3
+server   | 2023-03-17 04:37:09 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°3
+server   | 2023-03-17 04:37:09 INFO     action: accept_connections | result: in_progress
+client1  | time="2023-03-17 04:37:09" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°3\n"
+server   | 2023-03-17 04:37:14 INFO     action: accept_connections | result: success | ip: 172.25.125.3
+server   | 2023-03-17 04:37:14 INFO     action: receive_message | result: success | ip: 172.25.125.3 | msg: [CLIENT 1] Message N°4
+client1  | time="2023-03-17 04:37:14" level=info msg="action: receive_message | result: success | client_id: 1 | msg: [CLIENT 1] Message N°4\n"
+server   | 2023-03-17 04:37:14 INFO     action: accept_connections | result: in_progress
+client1  | time="2023-03-17 04:37:19" level=info msg="action: timeout_detected | result: success | client_id: 1"
+client1  | time="2023-03-17 04:37:19" level=info msg="action: loop_finished | result: success | client_id: 1"
 client1 exited with code 0
 ```
 

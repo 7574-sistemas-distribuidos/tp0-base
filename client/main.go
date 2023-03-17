@@ -66,6 +66,11 @@ func InitLogger(logLevel string) error {
 		return err
 	}
 
+    customFormatter := &logrus.TextFormatter{
+      TimestampFormat: "2006-01-02 15:04:05",
+      FullTimestamp: false,
+    }
+    logrus.SetFormatter(customFormatter)
 	logrus.SetLevel(level)
 	return nil
 }
@@ -73,12 +78,13 @@ func InitLogger(logLevel string) error {
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
-	logrus.Infof("Client configuration")
-	logrus.Infof("Client ID: %s", v.GetString("id"))
-	logrus.Infof("Server Address: %s", v.GetString("server.address"))
-	logrus.Infof("Loop Lapse: %v", v.GetDuration("loop.lapse"))
-	logrus.Infof("Loop Period: %v", v.GetDuration("loop.period"))
-	logrus.Infof("Log Level: %s", v.GetString("log.level"))
+	logrus.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_lapse: %v | loop_period: %v | log_level: %s",
+	    v.GetString("id"),
+	    v.GetString("server.address"),
+	    v.GetDuration("loop.lapse"),
+	    v.GetDuration("loop.period"),
+	    v.GetString("log.level"),
+    )
 }
 
 func main() {

@@ -32,13 +32,14 @@ class Server:
         client socket will also be closed
         """
         try:
+            # TODO: Modify the receive to avoid short-reads
             msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            logging.info(
-                'Message received from connection {}. Msg: {}'
-                .format(client_sock.getpeername(), msg))
-            client_sock.send("Your Message has been received: {}\n".format(msg).encode('utf-8'))
-        except OSError:
-            logging.info("Error while reading socket {}".format(client_sock))
+            addr = client_sock.getpeername()
+            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            # TODO: Modify the send to avoid short-writes
+            client_sock.send("{}\n".format(msg).encode('utf-8'))
+        except OSError as e:
+            logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             client_sock.close()
 
@@ -51,7 +52,7 @@ class Server:
         """
 
         # Connection arrived
-        logging.info("Proceed to accept new connections")
+        logging.info('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
-        logging.info('Got connection from {}'.format(addr))
+        logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
