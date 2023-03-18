@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import os
-import logging
 from configparser import ConfigParser
 from common.server import Server
+import logging
+import os
 
 
 def initialize_config():
@@ -50,7 +50,6 @@ def main():
     # Initialize server and start server loop
     server = Server(port, listen_backlog)
     server.run()
-
 
 def initialize_log(logging_level):
     """
