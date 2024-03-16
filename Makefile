@@ -29,6 +29,12 @@ docker-compose-up: docker-image
 	docker compose -f docker-compose-dev.yaml up -d --build
 .PHONY: docker-compose-up
 
+docker-compose-up-clients: docker-image
+	./script.sh $(CLIENTS)
+	docker compose -f docker-compose-dev.yaml up -d --build
+.PHONY: docker-compose-up
+	
+
 docker-compose-down:
 	docker compose -f docker-compose-dev.yaml stop -t 1
 	docker compose -f docker-compose-dev.yaml down
