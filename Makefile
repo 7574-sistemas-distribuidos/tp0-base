@@ -30,7 +30,7 @@ docker-compose-up: docker-image
 .PHONY: docker-compose-up
 
 docker-compose-up-clients: docker-image
-	./docker-compose-client-generator.sh $(CLIENTS)
+	./scripts/docker-compose-client-generator.sh $(CLIENTS)
 	docker compose -f docker-compose-dev.yaml up -d --build
 .PHONY: docker-compose-up
 	
