@@ -1,13 +1,18 @@
 import socket
 import logging
+import signal
 
+TIMEOUT = 0.5
 
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server_socket.settimeout(TIMEOUT)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self.running = True
+        signal.signal(signal.SIGTERM, self.handle_SIG_TERM)
 
     def run(self):
         """
@@ -17,12 +22,20 @@ class Server:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
-
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
-        while True:
-            client_sock = self.__accept_new_connection()
+        while self.running:
+            try:
+                client_sock = self.__accept_new_connection()
+            except socket.timeout:
+                continue
             self.__handle_client_connection(client_sock)
+
+        logging.debug("Cerrando socket")
+        self._server_socket.close()
+
+    def handle_SIG_TERM(self, _signum, _frame):
+        self.running = False
 
     def __handle_client_connection(self, client_sock):
         """

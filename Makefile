@@ -36,7 +36,7 @@ docker-compose-up-clients: docker-image
 	
 
 docker-compose-down:
-	docker compose -f docker-compose-dev.yaml stop -t 1
+	docker compose -f docker-compose-dev.yaml stop
 	docker compose -f docker-compose-dev.yaml down
 .PHONY: docker-compose-down
 
