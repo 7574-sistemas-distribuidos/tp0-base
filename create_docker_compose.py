@@ -30,8 +30,15 @@ def main():
             
             for i in range(1,amount+1):
                 create_client(new, i)
-                
 
+            while lines[index] != 'networks:\n':
+                index += 1
+
+            while index < len(lines):
+                line = lines[index]
+                new.write(line)
+                index += 1
+                
     os.remove('docker-compose-dev.yaml')
     os.rename('new.yaml', 'docker-compose-dev.yaml')
 
