@@ -22,7 +22,7 @@ docker-image:
 	# during client build (your hard drive will like this :) ). Don't left uncommented if you 
 	# want to avoid rebuilding client image every time the docker-compose-up command 
 	# is executed, even when client code has not changed
-	# docker rmi `docker images --filter label=intermediateStageToBeDeleted=true -q`
+	#docker rmi `docker images --filter label=intermediateStageToBeDeleted=true -q`
 .PHONY: docker-image
 
 docker-compose-up: docker-image
