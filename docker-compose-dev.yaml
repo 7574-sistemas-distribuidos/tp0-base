@@ -1,6 +1,8 @@
 version: '3.9'
 name: tp0
 services:
+
+  
   server:
     container_name: server
     image: server:latest
@@ -10,6 +12,7 @@ services:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
+
 
   client1:
     container_name: client1
@@ -23,9 +26,12 @@ services:
     depends_on:
       - server
 
+
 networks:
   testing_net:
     ipam:
       driver: default
       config:
         - subnet: 172.25.125.0/24
+
+

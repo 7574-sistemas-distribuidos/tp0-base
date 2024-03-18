@@ -4,7 +4,7 @@ add_compose_header() {
     echo "version: '3.9'
 name: tp0
 services:
-" > docker-compose-dev.yml
+" > docker-compose-dev.yaml
 }
 
 add_server() {
@@ -18,7 +18,7 @@ add_server() {
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
-" >> docker-compose-dev.yml
+" >> docker-compose-dev.yaml
 }
 
 add_clients() {
@@ -36,7 +36,7 @@ add_clients() {
       - testing_net
     depends_on:
       - server
-" >> docker-compose-dev.yml
+" >> docker-compose-dev.yaml
     done
 }
 
@@ -49,7 +49,7 @@ networks:
       config:
         - subnet: 172.25.125.0/24
 
-" >> docker-compose-dev.yml
+" >> docker-compose-dev.yaml
 }
 
 
