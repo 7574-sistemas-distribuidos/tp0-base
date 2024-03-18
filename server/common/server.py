@@ -2,7 +2,7 @@ import socket
 import logging
 import signal
 
-TIMEOUT = 0.5
+TIMEOUT = 0.75
 
 class Server:
     def __init__(self, port, listen_backlog):
