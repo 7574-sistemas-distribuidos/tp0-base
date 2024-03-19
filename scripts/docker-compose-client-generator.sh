@@ -18,7 +18,9 @@ services:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
     networks:
-      - testing_net"
+      - testing_net
+    volumes:
+      - serverConfig:/config"
 
 echo "$server_text" > docker-compose-dev.yaml
 
@@ -34,7 +36,9 @@ for ((i = 1; i <= $clientes; i++)); do
     networks:
       - testing_net
     depends_on:
-      - server"
+      - server
+    volumes:
+      - clientConfig:/config"
   echo "$client_text" >> docker-compose-dev.yaml
 done
 
@@ -47,3 +51,20 @@ networks:
         - subnet: 172.25.125.0/24"
 
 echo "$network_text" >> docker-compose-dev.yaml
+
+volumes_text="
+volumes:
+  serverConfig:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/palito/Desktop/sist_dist/tp0/sist_dist_tp0/server/config
+      o: bind
+  clientConfig:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/palito/Desktop/sist_dist/tp0/sist_dist_tp0/client/config
+      o: bind"
+
+echo "$volumes_text" >> docker-compose-dev.yaml

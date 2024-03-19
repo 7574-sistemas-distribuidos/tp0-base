@@ -19,7 +19,7 @@ def initialize_config():
 
     config = ConfigParser(os.environ)
     # If config.ini does not exists original config object is not modified
-    config.read("config.ini")
+    config.read("config/config.ini")
 
     config_params = {}
     try:
