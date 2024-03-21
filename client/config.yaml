@@ -1,8 +1,8 @@
 # id: 1
 server:
-  address: "server:12345"
+  address: "server:22222"
 loop:
-  lapse: "0m20s"
-  period: "5s"
+  lapse: "0m4s"
+  period: "1s"
 log:
   level: "info"

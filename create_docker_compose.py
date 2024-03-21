@@ -7,7 +7,7 @@ def create_client(file, number):
     file.write('    container_name: client' + str(number) + '\n')
     file.write('    image: client:latest\n')
     file.write('    volumes:\n')
-    file.write('      - ./client:/config\n')
+    file.write('      - ./client/config.yaml:/config.yaml\n')
     file.write('    entrypoint: /client\n')
     file.write('    environment:\n')
     file.write('      - CLI_ID=' + str(number) + '\n')
