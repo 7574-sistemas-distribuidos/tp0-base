@@ -61,6 +61,11 @@ client1  | time="2023-03-17 04:37:19" level=info msg="action: timeout_detected |
 client1  | time="2023-03-17 04:37:19" level=info msg="action: loop_finished | result: success | client_id: 1"
 client1 exited with code 0
 ```
+### Creacion de docker-compose
+`python3 create-compose.py <n>`
+
+Crea un nuevo archivo de docker-compose con n clientes, si se deja vacio se crea con 1 solo cliente
+
 
 ## Parte 1: Introducción a Docker
 En esta primera parte del trabajo práctico se plantean una serie de ejercicios que sirven para introducir las herramientas básicas de Docker que se utilizarán a lo largo de la materia. El entendimiento de las mismas será crucial para el desarrollo de los próximos TPs.
