@@ -74,7 +74,7 @@ func dateToBytes(date time.Time) []byte {
 	return data
 }
 
-func (msg *LotteryMsg) lotteryMsgToBytes() []byte {
+func (msg *LotteryMsg) ToBytes() []byte {
 	const MAX_NAME_LEN = 127
 	var data []byte 
 	

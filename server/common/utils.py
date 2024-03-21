@@ -96,3 +96,14 @@ def byte_array_to_big_endian_integer(bytes):
     for i in range(0, len(bytes)):
         number = number | bytes[i] << 8*(len(bytes)-1-i)
     return number
+
+# Receives bytes until n bytes have been received. If cannot receive n bytes None is returned
+def recv_exactly(socket, n):
+    buffer = bytes()
+    while n > 0:
+        received = socket.recv(n)
+        if len(received) == 0:
+            return None
+        buffer += received
+        n -= len(received)
+    return buffer 

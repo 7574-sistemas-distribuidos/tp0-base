@@ -1,7 +1,7 @@
 import socket
 import logging
 import signal
-from common.utils import NAME_LEN_BYTE_POSITION, HEADER_LEN, Bet, store_bets   
+from common.utils import NAME_LEN_BYTE_POSITION, HEADER_LEN, Bet, store_bets, recv_exactly
 
 TIMEOUT = 0.75
 STORED_BET_MSG = bytes(0xff)
@@ -48,8 +48,8 @@ class Server:
         """
         try:
             # TODO: Modify the receive to avoid short-reads
-            msg_header = client_sock.recv(HEADER_LEN)
-            names = client_sock.recv(msg_header[NAME_LEN_BYTE_POSITION])
+            msg_header = recv_exactly(client_sock, HEADER_LEN)
+            names = recv_exactly(client_sock, msg_header[NAME_LEN_BYTE_POSITION])
             bet = Bet.from_bytes(msg_header + names)
             store_bets([bet])
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
