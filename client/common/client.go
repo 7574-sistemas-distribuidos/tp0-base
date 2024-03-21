@@ -1,14 +1,14 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
+	//"bufio"
 	"net"
 	"time"
 	"os"
     "os/signal"
     "syscall"
-	"encoding/binary"
+	//"fmt"
+	"io"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -25,81 +25,6 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
-}
-
-
-type LotteryMsg struct {
-	birth_date    time.Time
-	dni           uint32
-	lotteryNumber uint32
-	name          string
-	lastName      string
-}
-
-//NOMBRE=Santiago Lionel, APELLIDO=Lorca, DOCUMENTO=30904465, NACIMIENTO=1999-03-17 y NUMERO=7574
-
-func LotteryMsgFromEnv() *LotteryMsg{
-	const SAMPLE_DATE = "2006-02-22"
-	birth_date := os.Getenv("NACIMIENTO")
-	fmt.Println("Env:", birth_date)
-	fecha, err := time.Parse(SAMPLE_DATE, birth_date)
-	fmt.Println("Fecha:", fecha)
-
-    if err != nil {
-        fmt.Println("Error al analizar la fecha:", err)
-        return nil
-    }
-	//dni: os.Getenv("DOCUMENTO"),
-	//lotteryNumber: os.Getenv("NUMERO"),
-	//name: os.Getenv("NOMBRE"),
-	//lastName: os.Getenv("APELLIDO"),
-	/*
-	lotteryMsg := &LotteryMsg{
-		birth_date: os.Getenv("DOCUMENTO"),
-		dni: os.Getenv("NACIMIENTO"),
-		lotteryNumber: os.Getenv("NUMERO"),
-		name: os.Getenv("NOMBRE"),
-		lastName: os.Getenv("APELLIDO"),
-	}
-	return lotteryMsg
-	*/
-	return nil
-}
-
-func dateToBytes(date time.Time) []byte {
-	var data []byte
-
-	data = append(data, byte(date.Day()))
-	data = append(data, byte(date.Month()))
-	year_bytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(year_bytes, uint16(date.Year()))
-	data = append(data, year_bytes...)
-	return data
-}
-
-func lotterryMsgToBytes(msg LotteryMsg) []byte {
-	const MAX_NAME_LEN = 127
-	var data []byte = dateToBytes(msg.birth_date)
-
-	dni_bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(dni_bytes, msg.dni)
-	data = append(data, dni_bytes...)
-
-	lottery_number_bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(lottery_number_bytes, msg.lotteryNumber)
-	data = append(data, lottery_number_bytes...)
-
-	full_name := truncateString(msg.name, MAX_NAME_LEN) + ";" + truncateString(msg.lastName, MAX_NAME_LEN)
-	data = append(data, byte(len(full_name)))
-	data = append(data, []byte(full_name)...)
-	return data
-}
-
-func truncateString(str string, maxLength int) string {
-	if len(str) > maxLength {
-		return str[:maxLength]
-	}
-	return str
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -130,8 +55,6 @@ func (c *Client) createClientSocket() error {
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 
-	//LotteryMsgFromEnv()
-	//return
 	// autoincremental msgID to identify every message sent
 	msgID := 1
 	sigs := make(chan os.Signal, 1)
@@ -153,26 +76,26 @@ loop:
 		c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
+		lottery_msg := LotteryMsgFromEnv()
+		c.conn.Write(lottery_msg.lotteryMsgToBytes())
+
+
+		//msg, err := bufio.NewReader(c.conn).ReadString('\n')
+		msg := make([]byte, 1)
+		_,err := io.ReadFull(c.conn, msg)
 		msgID++
 		c.conn.Close()
 
 		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+			log.Errorf("action: apuesta_enviada | result: fail | client_id: %v | error: %v",
                 c.config.ID,
 				err,
 			)
 			return
 		}
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-            c.config.ID,
-            msg,
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
+            lottery_msg.dni,
+            lottery_msg.lotteryNumber,
         )
 
 		// Wait a time between sending one message and the next one
@@ -180,7 +103,6 @@ loop:
 
 		select {
 		case <-sigs:
-			log.Infof("catcheado")
 			break loop
 		}
 	}

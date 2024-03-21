@@ -1,8 +1,10 @@
 import socket
 import logging
 import signal
+from common.utils import NAME_LEN_BYTE_POSITION, HEADER_LEN, Bet, store_bets   
 
 TIMEOUT = 0.75
+STORED_BET_MSG = bytes(0xff)
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -46,11 +48,14 @@ class Server:
         """
         try:
             # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            msg_header = client_sock.recv(HEADER_LEN)
+            names = client_sock.recv(msg_header[NAME_LEN_BYTE_POSITION])
+            bet = Bet.from_bytes(msg_header + names)
+            store_bets([bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
+
+            client_sock.sendall(STORED_BET_MSG)
+
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
