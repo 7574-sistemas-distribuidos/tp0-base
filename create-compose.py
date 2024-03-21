@@ -48,6 +48,9 @@ def build_client(i):
         ],
         'networks': ['testing_net'],
         'depends_on': ['server'],
+        'volumes': [
+            './client/config.yaml:/config.yaml'
+        ]
 
     }
 
@@ -64,6 +67,9 @@ def build_server():
         'networks': [
             'testing_net'
         ],
+        'volumes': [
+            './server/config.ini:/config.ini'
+        ]
 
     }
 
