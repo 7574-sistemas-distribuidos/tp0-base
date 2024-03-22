@@ -15,6 +15,7 @@ def generate_doccomp(tot_clients):
                     'PYTHONUNBUFFERED=1',
                     'LOGGING_LEVEL=DEBUG'
                 ],
+                'volumes': [ './server/config.ini:/config/server/config.ini' ],
                 'networks': ['testing_net']
             }
         },
@@ -40,6 +41,7 @@ def generate_doccomp(tot_clients):
                 f'CLI_ID={i}',
                 'CLI_LOG_LEVEL=DEBUG'
             ],
+            'volumes': [ './client/config.yaml:/config/client/config.yaml' ],
             'networks': ['testing_net'],
             'depends_on': ['server']
         }
