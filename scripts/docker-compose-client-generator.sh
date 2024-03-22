@@ -58,13 +58,13 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/palito/Desktop/sist_dist/tp0/sist_dist_tp0/server/config
+      device: ./server/config
       o: bind
   clientConfig:
     driver: local
     driver_opts:
       type: none
-      device: /home/palito/Desktop/sist_dist/tp0/sist_dist_tp0/client/config
+      device: ./client/config
       o: bind"
 
 echo "$volumes_text" >> docker-compose-dev.yaml

@@ -32,6 +32,25 @@ services:
     volumes:
       - clientConfig:/config
 
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
+      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Santiago Martin
+      - APELLIDO=Lorca
+      - DOCUMENTO=40000000
+      - NACIMIENTO=2000-01-10
+      - NUMERO=7500
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - clientConfig:/config
+
 networks:
   testing_net:
     ipam:
@@ -44,11 +63,11 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/palito/Desktop/sist_dist/tp0/sist_dist_tp0/server/config
+      device: ./server/config
       o: bind
   clientConfig:
     driver: local
     driver_opts:
       type: none
-      device: /home/palito/Desktop/sist_dist/tp0/sist_dist_tp0/client/config
+      device: ./client/config
       o: bind

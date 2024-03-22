@@ -79,6 +79,10 @@ func (c *Client) StartClientLoop() {
 
 		// TODO: Modify the send to avoid short-write
 		lottery_msg := LotteryMsgFromEnv()
+		if lottery_msg == nil{
+			log.Errorf("action: creando apuesta | result: fail | variables de entorno no inicializadas")
+			return
+		}
 		err := send_all(c.conn, lottery_msg.ToBytes())
     	if err != nil {
         	log.Errorf("action: enviando apuesta | result: fail | client_id: %v | error: %v",
