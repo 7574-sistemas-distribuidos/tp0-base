@@ -41,24 +41,9 @@ services:
     depends_on:
       - server
 
-  client3:
-    container_name: client3
-    image: client:latest
-    volumes:
-      - ./client/config.yaml:/config.yaml
-    entrypoint: /client
-    environment:
-      - CLI_ID=3
-      - CLI_LOG_LEVEL=DEBUG
-    networks:
-      - testing_net
-    depends_on:
-      - server
-
 networks:
   testing_net:
     ipam:
       driver: default
       config:
         - subnet: 172.25.125.0/24
-        
