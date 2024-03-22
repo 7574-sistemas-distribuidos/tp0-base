@@ -102,8 +102,14 @@ def recv_exactly(socket, n):
     buffer = bytes()
     while n > 0:
         received = socket.recv(n)
-        if len(received) == 0:
-            return None
         buffer += received
         n -= len(received)
     return buffer 
+
+# Sends bytes until all of them are sent, or a failure occurs in which case None 
+# is returned. 0 is return on succes
+def send_all(socket, byte_array):
+    while len(byte_array) > 0:
+        sent = socket.send(byte_array)
+        byte_array = byte_array[sent:]
+    return 0

@@ -1,7 +1,7 @@
 import socket
 import logging
 import signal
-from common.utils import NAME_LEN_BYTE_POSITION, HEADER_LEN, Bet, store_bets, recv_exactly
+from common.utils import NAME_LEN_BYTE_POSITION, HEADER_LEN, Bet, store_bets, recv_exactly, send_all
 
 TIMEOUT = 0.75
 STORED_BET_MSG = bytes(0xff)
@@ -54,7 +54,7 @@ class Server:
             store_bets([bet])
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
 
-            client_sock.sendall(STORED_BET_MSG)
+            send_all(client_sock, STORED_BET_MSG)
 
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
