@@ -102,6 +102,8 @@ def recv_exactly(socket, n):
     buffer = bytes()
     while n > 0:
         received = socket.recv(n)
+        if len(received) == 0:
+            return None
         buffer += received
         n -= len(received)
     return buffer 

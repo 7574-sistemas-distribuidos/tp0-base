@@ -10,7 +10,7 @@ import (
 	//log "github.com/sirupsen/logrus"
 )
 
-type LotteryMsg struct {
+type Bet struct {
 	agency		  uint16
 	birth_date    time.Time
 	dni           uint32
@@ -21,7 +21,7 @@ type LotteryMsg struct {
 
 //NOMBRE=Santiago Lionel, APELLIDO=Lorca, DOCUMENTO=30904465, NACIMIENTO=1999-03-17 y NUMERO=7574
 
-func LotteryMsgFromEnv() *LotteryMsg{
+func BetFromEnv() *Bet{
 	const SAMPLE_DATE = "2006-01-02"
 	
 	agency, err := strconv.ParseUint(os.Getenv("CLI_ID"), 10, 16)
@@ -52,7 +52,7 @@ func LotteryMsgFromEnv() *LotteryMsg{
 
 	last_name := os.Getenv("APELLIDO")
 
-	lotteryMsg := &LotteryMsg{
+	bet := &Bet{
 		agency: uint16(agency),
 		birth_date: birth_date,
 		dni: uint32(dni),
@@ -60,7 +60,7 @@ func LotteryMsgFromEnv() *LotteryMsg{
 		name: name,
 		lastName: last_name,
 	}
-	return lotteryMsg
+	return bet
 }
 
 func dateToBytes(date time.Time) []byte {
@@ -74,7 +74,7 @@ func dateToBytes(date time.Time) []byte {
 	return data
 }
 
-func (msg *LotteryMsg) ToBytes() []byte {
+func (msg *Bet) ToBytes() []byte {
 	const MAX_NAME_LEN = 127
 	var data []byte 
 	
