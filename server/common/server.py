@@ -11,8 +11,7 @@ class Server:
         self.active_clients = {}
         self.running = True
         
-
-    def handle_sigterm(self, signal, handler):
+    def handle_sigterm(self):
         logging.info("HANDLING SIGTERM")
         self.running = False
         for client in self.active_clients.values():
@@ -28,8 +27,6 @@ class Server:
         finishes, servers starts to accept new connections again
         """
         signal.signal(signal.SIGTERM, self.handle_sigterm)
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
 
         while self.running:
             client_sock = self.__accept_new_connection()
@@ -44,12 +41,14 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
+            msg = self.full_read(client_sock).rstrip().decode('utf-8')
             addr = client_sock.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            
+            if msg:
+                self.full_write(client_sock,msg)
+
+
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:            
@@ -77,4 +76,29 @@ class Server:
                 logging.error("SOCKET CERRADO")
                 return None
 
-        
+    def full_write(self,sock, msg):
+        #por default escribe un char mas, y sumando el \n, se terminan escribiendo 2 char mas.
+        #luego, se leen 2 char de mas en el cliente
+        total_sent = 0
+
+        while total_sent < len(msg):
+            sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
+                #client_sock.send("{}\n".format(msg).encode('utf-8'))
+            if sent == 0:
+                print("SOCKET CERRADO: sent = 0")
+                logging.error("action: write in socket | result: fail | error: {e}")
+                break
+
+            total_sent += sent
+        return total_sent      
+
+    def full_read(self,sock):
+        bytes_read = b''
+        while bytes_read[-1:] != b'\n':
+            read = sock.recv(1024)
+            if len(read) <= 0:
+                logging.error("action: read in socket | result: fail | error: {e}")
+                return None
+
+            bytes_read += read
+        return bytes_read
