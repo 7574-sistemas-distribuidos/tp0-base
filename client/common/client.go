@@ -69,7 +69,7 @@ loop:
 			break loop
 
 		case <-sigchan:
-			log.Infof("2 CLIENTE RECIBIO SIGRETMNNOSNDANSD")
+			log.Infof("CLIENTE RECIBIO SIGTERM")
 			c.conn.Close()
 			break loop
 
@@ -85,19 +85,18 @@ loop:
 
 	sending:
 		for sent_bytes < len(msg_to_sv) {
-
 			bytes, err := fmt.Fprintf(
 				c.conn,
 				msg_to_sv,
 				c.config.ID,
 				msgID,
 			)
-
 			if err != nil {
 				log.Errorf("action: send_message | result: fail | client_id: %v | error: %v",
 					c.config.ID,
 					err,
 				)
+				c.conn.Close()
 				break sending
 			}
 			sent_bytes += bytes
