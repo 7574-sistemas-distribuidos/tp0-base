@@ -80,12 +80,29 @@ loop:
 		c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
+		sent_bytes := 0
+		msg_to_sv := "[CLIENT %v] Message N°%v\n"
+
+	sending:
+		for sent_bytes < len(msg_to_sv) {
+
+			bytes, err := fmt.Fprintf(
+				c.conn,
+				msg_to_sv,
+				c.config.ID,
+				msgID,
+			)
+
+			if err != nil {
+				log.Errorf("action: send_message | result: fail | client_id: %v | error: %v",
+					c.config.ID,
+					err,
+				)
+				break sending
+			}
+			sent_bytes += bytes
+		}
+
 		msg, err := bufio.NewReader(c.conn).ReadString('\n')
 		msgID++
 		c.conn.Close()
