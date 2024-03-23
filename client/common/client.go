@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
+    "os/signal"
+    "syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -48,10 +51,29 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) HandleSIGTERM() {
+    // Make a channel to receive SIGTERM 
+    sigCh := make(chan os.Signal, 1)
+    signal.Notify(sigCh, syscall.SIGTERM)
+
+    // Routine in the background to handle SIGTERM signal
+    go func() {
+        <-sigCh
+        log.Println("SIGTERM received, shutting down gracefully")
+        
+        if c.conn != nil {
+            c.conn.Close()
+        }
+        os.Exit(0)
+    }()
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	msgID := 1
+
+    c.HandleSIGTERM()
 
 loop:
 	// Send messages if the loopLapse threshold has not been surpassed
