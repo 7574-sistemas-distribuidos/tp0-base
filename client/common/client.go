@@ -51,6 +51,17 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func getEnvs() []string {
+	envs := []string{
+		os.Getenv("NOMBRE"),
+		os.Getenv("APELLIDO"),
+		os.Getenv("DOCUMENTO"),
+		os.Getenv("NACIMIENTO"),
+		os.Getenv("NUMERO"),
+	}
+	return envs
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
@@ -80,16 +91,17 @@ loop:
 		c.createClientSocket()
 
 		// TODO: Modify the send to avoid short-write
-		sent_bytes := 0
-		msg_to_sv := "[CLIENT %v] Message N°%v\n"
+		bytes_sent := 0
+		data := getEnvs()
+		msg_to_sv := fmt.Sprintf("|AGENCIA %v|NOMBRE %v|APELLIDO %v|DNI %v|NACIMIENTO %v|NUMERO %v", c.config.ID, data[0], data[1], data[2], data[3], data[4]) //PONER CONSTANTES
+		header := fmt.Sprintf("%v ", len(msg_to_sv))
+		msg_to_sv = header + msg_to_sv
 
 	sending:
-		for sent_bytes < len(msg_to_sv) {
+		for bytes_sent < len(msg_to_sv) {
 			bytes, err := fmt.Fprintf(
 				c.conn,
-				msg_to_sv,
-				c.config.ID,
-				msgID,
+				msg_to_sv[bytes_sent:],
 			)
 			if err != nil {
 				log.Errorf("action: send_message | result: fail | client_id: %v | error: %v",
@@ -99,10 +111,15 @@ loop:
 				c.conn.Close()
 				break sending
 			}
-			sent_bytes += bytes
+			bytes_sent += bytes
 		}
 
+		// lee respuesta del server. verificar que sea finalizado con exito
 		msg, err := bufio.NewReader(c.conn).ReadString('\n')
+		if err != nil {
+			println("ERROR")
+			fmt.Println(err)
+		}
 		msgID++
 		c.conn.Close()
 

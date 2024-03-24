@@ -1,6 +1,7 @@
 import socket
 import logging
 import signal
+from .utils import Bet, store_bets
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -33,6 +34,8 @@ class Server:
             if client_sock:
                 self.__handle_client_connection(client_sock)
 
+
+
     def __handle_client_connection(self, client_sock):
         """
         Read message from a specific client socket and closes the socket
@@ -43,10 +46,16 @@ class Server:
         try:
             msg = self.full_read(client_sock).rstrip().decode('utf-8')
             addr = client_sock.getpeername()
+
+            bet = self.parse_bet(msg)
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             
-            if msg:
-                self.full_write(client_sock,msg)
+
+            #protocolo muy simple, mejorar 
+            if bet:
+                self.full_write(client_sock,"ok")
+            else:
+                self.full_write(client_sock,"error")
 
 
         except OSError as e:
@@ -93,12 +102,52 @@ class Server:
         return total_sent      
 
     def full_read(self,sock):
+        header_len = 2 #PONER COMO CONSTANTE (len en bytes)
         bytes_read = b''
-        while bytes_read[-1:] != b'\n':
-            read = sock.recv(1024)
-            if len(read) <= 0:
-                logging.error("action: read in socket | result: fail | error: {e}")
-                return None
+        read = sock.recv(1024)
+        if len(read) <= 0:
+            logging.error("action: read in socket | result: fail | error: {e}")
+            return None
 
-            bytes_read += read
+        if read and len(read) > 2:
+            msg_len = int(read[:header_len].decode('utf-8'))
+            bytes_read += read[header_len:]
+
+            while len(bytes_read) < int(msg_len):
+                read = sock.recv(1024)
+                bytes_read += read
+                if len(read) <= 0: #codigo repetido
+                    logging.error("action: read in socket | result: fail | error: {e}")
+                    return None 
+                
         return bytes_read
+
+    def parse_bet(self, msg):
+        """
+        The message received from the client is a string with the following format:
+        <len> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>
+          0         1          2          3          4           5          6
+        """        
+        categorias = msg.split("|")
+        for i in range(1,len(categorias)):
+            categoria = categorias[i].split(" ")
+            categoria.pop(0)
+            categorias[i] = " ".join(categoria)
+
+        agencia = categorias[1]
+        nombre = categorias[2]
+        apellido = categorias[3]
+        documento = categorias[4]
+        nacimiento = categorias[5]
+        numero = categorias[6]
+
+        print("all data: ",agencia, nombre, apellido, documento, nacimiento, numero)
+
+        bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
+        print(f"bet data: {bet.agency} {bet.first_name} {bet.last_name} {bet.document} {bet.birthdate} {bet.number}")
+
+        bets = [bet]
+        store_bets(bets)
+        logging.info(f"action: apuesta_almacenada | result: success | dni: ${documento} | numero: ${numero}")
+        return bet
+        

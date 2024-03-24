@@ -22,6 +22,11 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Santiago Lionel
+      - APELLIDO=Lorca
+      - DOCUMENTO=30904465
+      - NACIMIENTO=1999-03-17
+      - NUMERO=7574
     networks:
       - testing_net
     depends_on:
@@ -36,6 +41,11 @@ services:
     environment:
       - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Obama
+      - APELLIDO=
+      - DOCUMENTO=99999999
+      - NACIMIENTO=1961-08-04
+      - NUMERO=9999
     networks:
       - testing_net
     depends_on:
