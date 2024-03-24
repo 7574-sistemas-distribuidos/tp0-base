@@ -134,7 +134,8 @@ func read_message(c *Client, conn net.Conn) string {
 		c.config.ID,
 		recv,
 	)
-	return recv[2:]
+	// Return the message without the header
+	return recv[3:]
 }
 
 func verify_recv_error(c *Client, err error) {

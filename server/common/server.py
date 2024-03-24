@@ -86,9 +86,9 @@ class Server:
 
     def full_write(self,sock, msg):
         total_sent = 0
-
+        #header
         msg_len = str(len(msg))
-        msg = msg_len + msg
+        msg = msg_len + "|" + msg
 
         while total_sent < len(msg):
             sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
