@@ -51,11 +51,10 @@ class Server:
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             
 
-            #protocolo muy simple, mejorar 
             if bet:
-                self.full_write(client_sock,"ok")
+                self.full_write(client_sock,f"ack {bet.document} {bet.number}")
             else:
-                self.full_write(client_sock,"error")
+                self.full_write(client_sock,f"err {bet.document} {bet.number}")
 
 
         except OSError as e:
@@ -86,13 +85,13 @@ class Server:
                 return None
 
     def full_write(self,sock, msg):
-        #por default escribe un char mas, y sumando el \n, se terminan escribiendo 2 char mas.
-        #luego, se leen 2 char de mas en el cliente
         total_sent = 0
+
+        msg_len = str(len(msg))
+        msg = msg_len + msg
 
         while total_sent < len(msg):
             sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
-                #client_sock.send("{}\n".format(msg).encode('utf-8'))
             if sent == 0:
                 print("SOCKET CERRADO: sent = 0")
                 logging.error("action: write in socket | result: fail | error: {e}")
@@ -141,13 +140,9 @@ class Server:
         nacimiento = categorias[5]
         numero = categorias[6]
 
-        print("all data: ",agencia, nombre, apellido, documento, nacimiento, numero)
-
         bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
-        print(f"bet data: {bet.agency} {bet.first_name} {bet.last_name} {bet.document} {bet.birthdate} {bet.number}")
-
         bets = [bet]
         store_bets(bets)
-        logging.info(f"action: apuesta_almacenada | result: success | dni: ${documento} | numero: ${numero}")
+        logging.info(f"action: apuesta_almacenada | result: success | dni: {documento} | numero: {numero}")
         return bet
         
