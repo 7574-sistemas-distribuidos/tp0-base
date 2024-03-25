@@ -104,9 +104,7 @@ loop:
 
 				break loop
 			}
-			if send_message(c, c.conn, message) != nil {
-				send_message(c, c.conn, message)
-			}
+			send_message(c, c.conn, message)
 			total_sent++
 		}
 
@@ -120,7 +118,7 @@ loop:
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
-	log.Infof("TOTAL SENT", total_sent)
+	log.Infof("TOTAL SENT %v", total_sent)
 	c.conn.Close()
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)

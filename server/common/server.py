@@ -57,7 +57,7 @@ class Server:
                 bets_received = []
             
                 for i in chunk:
-                    logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {i}')
+                    #logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {i}')
                     i = i.rstrip()
                     bet = self.parse_bet(i)
                     if bet:
@@ -67,12 +67,12 @@ class Server:
                     else:
                         print("BET INVALIDA")
 
-                store_bets(bets_received)
-                
-                logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
-
-
                 self.full_write(client_sock,f"ack {len(bets_received)}")
+                store_bets(bets_received)                    
+                logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+            else:
+
+                client_sock.close()
 
 
         except OSError as e:
@@ -80,6 +80,7 @@ class Server:
         finally:            
             #addr = client_sock.getpeername()
             #self.active_clients.pop(addr[0])
+            
             client_sock.close()
 
 
@@ -123,6 +124,7 @@ class Server:
         message = ""
         
         read = sock.recv(1024)
+        print(read)
         if len(read) <= 0:
             logging.error(f"action: read in socket | result: fail | error: {read}")
             return None
@@ -131,7 +133,6 @@ class Server:
             message += read.decode('utf-8')
 
             #if first bet read is the last, return
-
             msg_len, last_msg = self.get_header(message)
             if msg_len == None:
                 return None
@@ -145,11 +146,11 @@ class Server:
             bet, flag_last = self.get_header(bets[len(bets)-1])
             while flag_last == 0:
                 new = sock.recv(1024)
-                message += new.decode('utf-8')
+                new_message += new.decode('utf-8')
                 if len(new) == 0:
                     logging.error("action: read in socket | result: fail | error: {e}")
                     return None 
-                new_bets = new.split("$")
+                new_bets = new_message.split("$")
                 bets += new_bets
                 bet, flag_last = self.get_header(new_bets[len(new_bets)-1])
 
@@ -172,7 +173,8 @@ class Server:
     def parse_bet(self, msg):
         """
         The message received from the client is a string with the following format:
-        <header> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>
+        <header> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>|$
+        0/1 len
             0         1          2          3          4           5           6
         """        
         categorias = msg.split("|")
