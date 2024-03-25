@@ -115,13 +115,12 @@ loop:
 		answer := strings.Split(sv_answer, " ")
 		if answer[0] == "err" {
 			log.Infof("closing: %v", c.config.ID)
-			c.conn.Close()
 			break loop
 		}
-		c.conn.Close()
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
+
 	c.conn.Close()
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
@@ -150,9 +149,6 @@ func read_message(c *Client, conn net.Conn) string {
 		} else {
 			break
 		}
-	}
-	if err != nil {
-		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
 	}
 	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 		c.config.ID,

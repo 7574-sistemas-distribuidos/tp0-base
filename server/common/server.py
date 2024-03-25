@@ -35,6 +35,7 @@ class Server:
             if client_sock:
                 self.__handle_client_connection(client_sock)
 
+        store_bets(self.bets)
 
 
     def __handle_client_connection(self, client_sock):
@@ -57,6 +58,8 @@ class Server:
                         self.bets.append(bet)
                         logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
                         bets_received += 1
+                    else:
+                        print("BET INVALIDA")
 
 
                     self.full_write(client_sock,f"ack {bets_received}")
@@ -109,37 +112,39 @@ class Server:
         min_header_len = 4 #PONER COMO CONSTANTE (len en bytes)
         message = ""
         read = sock.recv(1024)
-        print("READ: ", read)
         if len(read) <= 0:
             logging.error(f"action: read in socket | result: fail | error: {read}")
             return None
-        
+
         if read and len(read) > min_header_len:
             message += read.decode('utf-8')
             #if first bet read is the last, return
             msg_len, last_msg = self.get_header(message)
+            if msg_len == None:
+                return None
             if last_msg == 1:
                 return message, last_msg
             
             #else, read what arrived
-            bets = message.split("&")
+            bets = message.split('$')
+            bets.pop() #remove last element, which is empty
 
             #if last bet read is not the last, keep reading
             bet, last = self.get_header(bets[len(bets)-1])
             while last == 0:
-                print("entro al while")
                 new = sock.recv(1024)
                 message += read.decode('utf-8')
                 if len(read) <= 0:
                     logging.error("action: read in socket | result: fail | error: {e}")
                     return None 
-                bets += new.split("&")
+                bets += new.split("$")
                         
 
-        print("bets from read: ", bets)
         return bets
 
     def get_header(self, msg):
+        if msg == '':
+            return None,None
         header = ""
         for i in range(0,len(msg)-1):
             if msg[i] == "|":
@@ -154,10 +159,13 @@ class Server:
     def parse_bet(self, msg):
         """
         The message received from the client is a string with the following format:
-        <len> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>
-          0         1          2          3          4           5          6
+        <header> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>
+            0         1          2          3          4           5           6
         """        
         categorias = msg.split("|")
+        categorias.pop() #last is always empty
+        if len(categorias) != 7:
+            return None
         for i in range(1,len(categorias)):
             categoria = categorias[i].split(" ")
             categoria.pop(0)
@@ -169,7 +177,7 @@ class Server:
         documento = categorias[4]
         nacimiento = categorias[5]
         numero = categorias[6]
-
+        #print data
         bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
         return bet
         
