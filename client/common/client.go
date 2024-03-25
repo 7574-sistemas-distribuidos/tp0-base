@@ -53,24 +53,20 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func getEnvs() []string {
-	envs := []string{
-		os.Getenv("NOMBRE"),
-		os.Getenv("APELLIDO"),
-		os.Getenv("DOCUMENTO"),
-		os.Getenv("NACIMIENTO"),
-		os.Getenv("NUMERO"),
-	}
-	return envs
-}
-
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
-loop:
+	filename := "agency-" + c.config.ID + ".csv"
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Failed to open file: %s", err)
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+
 	// Send messages if the loopLapse threshold has not been surpassed
 	for timeout := time.After(c.config.LoopLapse); ; {
 		select {
@@ -78,12 +74,12 @@ loop:
 			log.Infof("action: timeout_detected | result: success | client_id: %v",
 				c.config.ID,
 			)
-			break loop
+			return
 
 		case <-sigchan:
 			log.Infof("CLIENTE RECIBIO SIGTERM")
 			c.conn.Close()
-			break loop
+			return
 
 		default:
 		}
@@ -92,29 +88,27 @@ loop:
 
 		c.createClientSocket()
 
-		bytes_sent := 0
-		data := getEnvs()
-		msg_to_sv := fmt.Sprintf("|AGENCIA %v|NOMBRE %v|APELLIDO %v|DNI %v|NACIMIENTO %v|NUMERO %v", c.config.ID, data[0], data[1], data[2], data[3], data[4]) //PONER CONSTANTES
-		header := fmt.Sprintf("%v ", len(msg_to_sv))
-		msg_to_sv = header + msg_to_sv
-
 		// SENDING
-		send_message(c, c.conn, msg_to_sv[bytes_sent:])
+		batch_size := 02
+		for i := 0; i < batch_size; i++ {
+			msg_to_sv := fmt.Sprintf("%v", batch_size)
+			msg_to_sv += create_message(c, reader)
+			send_message(c, c.conn, msg_to_sv)
+		}
 
 		//READING
 		sv_answer := read_message(c, c.conn)
 		answer := strings.Split(sv_answer, " ")
 		if answer[0] == "err" {
 			c.conn.Close()
-			break loop
+			return
 		}
-		c.conn.Close()
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
-	}
-	c.conn.Close()
+		c.conn.Close()
 
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	}
 }
 
 func read_message(c *Client, conn net.Conn) string {
@@ -150,6 +144,7 @@ func verify_recv_error(c *Client, err error) {
 
 func send_message(c *Client, conn net.Conn, msg string) {
 	bytes_sent := 0
+	log.Infof("ABOUT TO SEND: msg: %v", msg)
 	for bytes_sent < len(msg) {
 		bytes, err := fmt.Fprintf(
 			conn,
@@ -165,4 +160,29 @@ func send_message(c *Client, conn net.Conn, msg string) {
 		}
 		bytes_sent += bytes
 	}
+}
+
+func read_csv_line(reader *bufio.Reader) string {
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatalf("Failed to read line: %s", err)
+		return ""
+	}
+	return line
+}
+
+func create_message(c *Client, reader *bufio.Reader) string {
+	msg_to_sv := ""
+
+	line := read_csv_line(reader)
+	if line == "" {
+		return "err"
+	}
+	fields := strings.Split(line, ",")
+	fields[4] = strings.TrimSuffix(fields[4], "\n")
+	fields[4] = strings.TrimSuffix(fields[4], "\r")
+	msg_to_sv += fmt.Sprintf("|AGENCIA %v|NOMBRE %v|APELLIDO %v|DNI %v|NACIMIENTO %v|NUMERO %v|$", c.config.ID, fields[0], fields[1], fields[2], fields[3], fields[4]) //PONER CONSTANTES
+	//header := fmt.Sprintf("%v ", len(msg_to_sv))
+	//msg_to_sv = header + msg_to_sv
+	return msg_to_sv
 }

@@ -8,6 +8,7 @@ def create_client(file, number):
     file.write('    image: client:latest\n')
     file.write('    volumes:\n')
     file.write('      - ./client/config.yaml:/config.yaml\n')
+    file.write('      - .data/dataset/agency-'+ str(number) + '.csv:/agency-'+ str(number) +'.csv\n')
     file.write('    entrypoint: /client\n')
     file.write('    environment:\n')
     file.write('      - CLI_ID=' + str(number) + '\n')

@@ -11,6 +11,7 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.active_clients = {}
         self.running = True
+        self.bets = []
         
     def handle_sigterm(self):
         logging.info("HANDLING SIGTERM")
@@ -34,7 +35,7 @@ class Server:
             if client_sock:
                 self.__handle_client_connection(client_sock)
 
-
+        store_bets(self.bets) 
 
     def __handle_client_connection(self, client_sock):
         """
@@ -44,22 +45,35 @@ class Server:
         client socket will also be closed
         """
         try:
-            msg = self.full_read(client_sock).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
+            read = self.full_read(client_sock)
+            if read:
+                msg = read.rstrip().decode('utf-8')
+                addr = client_sock.getpeername()
+                messages = msg.split("$")
 
-            bet = self.parse_bet(msg)
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+                messages.pop()
+                size_of_batch = int(read[0]) # read.count($)
+                for i in range(0,len(messages)):
+                    bet = self.parse_bet(messages[i])
+                    self.bets.append(bet)    
+                
+                #if len(bets) == size_of_batch:
+                self.full_write(client_sock,f"ack {size_of_batch}")
+                
+                logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+
+
+                #else:
+                #    self.full_write(client_sock,f"err {len(bets)}")
+
+                logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             
 
-            if bet:
-                self.full_write(client_sock,f"ack {bet.document} {bet.number}")
-            else:
-                self.full_write(client_sock,f"err {bet.document} {bet.number}")
 
 
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
-        finally:            
+        finally:           
             addr = client_sock.getpeername()
             self.active_clients.pop(addr[0])
             client_sock.close()
@@ -101,7 +115,7 @@ class Server:
         return total_sent      
 
     def full_read(self,sock):
-        header_len = 2 #PONER COMO CONSTANTE (len en bytes)
+        header_len = 1 #PONER COMO CONSTANTE (len en bytes)
         bytes_read = b''
         read = sock.recv(1024)
         if len(read) <= 0:
@@ -110,11 +124,14 @@ class Server:
 
         if read and len(read) > 2:
             msg_len = int(read[:header_len].decode('utf-8'))
-            bytes_read += read[header_len:]
+            bytes_read += read
+
+            remaining = msg_len - len(bytes_read)
 
             while len(bytes_read) < int(msg_len):
-                read = sock.recv(1024)
+                read = sock.recv(remaining)
                 bytes_read += read
+                remaining = msg_len - len(bytes_read)
                 if len(read) <= 0: #codigo repetido
                     logging.error("action: read in socket | result: fail | error: {e}")
                     return None 
@@ -127,6 +144,7 @@ class Server:
         <len> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>
           0         1          2          3          4           5          6
         """        
+    
         categorias = msg.split("|")
         for i in range(1,len(categorias)):
             categoria = categorias[i].split(" ")
@@ -141,8 +159,5 @@ class Server:
         numero = categorias[6]
 
         bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
-        bets = [bet]
-        store_bets(bets)
-        logging.info(f"action: apuesta_almacenada | result: success | dni: {documento} | numero: {numero}")
         return bet
         
