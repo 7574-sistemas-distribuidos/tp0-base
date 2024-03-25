@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -70,6 +69,14 @@ func (c *Client) StartClientLoop() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
+	filename := "agency-" + c.config.ID + ".csv"
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Failed to open file: %s", err)
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+
 loop:
 	// Send messages if the loopLapse threshold has not been surpassed
 	for timeout := time.After(c.config.LoopLapse); ; {
@@ -89,22 +96,25 @@ loop:
 		}
 
 		// Create the connection the server in every loop iteration. Send an
-
 		c.createClientSocket()
 
-		bytes_sent := 0
-		data := getEnvs()
-		msg_to_sv := fmt.Sprintf("|AGENCIA %v|NOMBRE %v|APELLIDO %v|DNI %v|NACIMIENTO %v|NUMERO %v", c.config.ID, data[0], data[1], data[2], data[3], data[4]) //PONER CONSTANTES
-		header := fmt.Sprintf("%v ", len(msg_to_sv))
-		msg_to_sv = header + msg_to_sv
-
 		// SENDING
-		send_message(c, c.conn, msg_to_sv[bytes_sent:])
+		batch_size := 2
+		for i := 0; i < batch_size; i++ {
+			last := 0
+			if i == batch_size-1 {
+				last = 1
+			}
+			message := create_message(c, reader, last)
+			send_message(c, c.conn, message)
+
+		}
 
 		//READING
 		sv_answer := read_message(c, c.conn)
 		answer := strings.Split(sv_answer, " ")
 		if answer[0] == "err" {
+			log.Infof("closing: %v", c.config.ID)
 			c.conn.Close()
 			break loop
 		}
@@ -122,30 +132,46 @@ func read_message(c *Client, conn net.Conn) string {
 	reader := bufio.NewReader(conn)
 	recv, err := reader.ReadString('\n')
 	verify_recv_error(c, err)
-	bytes_read += len(recv)
 
-	header, err := strconv.Atoi(recv[:2])
-	for bytes_read < header+2 {
+	bytes_read += len(recv)
+	min_header_len := 2
+	for bytes_read < min_header_len {
 		read, err := reader.ReadString('\n')
-		verify_recv_error(c, err)
+		if verify_recv_error(c, err) != nil {
+			return err.Error()
+		}
 		bytes_read += len(read)
+	}
+
+	header := ""
+	for i := 0; i < len(recv); i++ {
+		if recv[i] != '|' {
+			header += string(recv[i])
+		} else {
+			break
+		}
+	}
+	if err != nil {
+		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
 	}
 	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 		c.config.ID,
 		recv,
 	)
 	// Return the message without the header
-	return recv[3:]
+	//log.Infof("MSG without header: %v", recv[len(header):])
+	return recv[len(header):]
 }
 
-func verify_recv_error(c *Client, err error) {
+func verify_recv_error(c *Client, err error) error {
 	if err != nil {
 		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
 			c.config.ID,
 			err,
 		)
-		return
+		return err
 	}
+	return nil
 }
 
 func send_message(c *Client, conn net.Conn, msg string) {
@@ -155,6 +181,7 @@ func send_message(c *Client, conn net.Conn, msg string) {
 			conn,
 			msg[bytes_sent:],
 		)
+		log.Infof("MSG JUST SENT: %v", msg)
 		if err != nil {
 			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v",
 				c.config.ID,
@@ -165,4 +192,33 @@ func send_message(c *Client, conn net.Conn, msg string) {
 		}
 		bytes_sent += bytes
 	}
+}
+
+func read_csv_line(reader *bufio.Reader) string {
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatalf("Failed to read line: %s", err)
+		return ""
+	}
+	return line
+}
+
+func create_message(c *Client, reader *bufio.Reader, last int) string {
+	// HEADER 				BODY
+	// len(msg) last msg(0/1) | msg
+	msg := ""
+
+	line := read_csv_line(reader)
+	if line == "" {
+		return "err"
+	}
+	fields := strings.Split(line, ",")
+	fields[4] = strings.TrimSuffix(fields[4], "\n")
+	fields[4] = strings.TrimSuffix(fields[4], "\r")
+	msg += fmt.Sprintf("|AGENCIA %v|NOMBRE %v|APELLIDO %v|DNI %v|NACIMIENTO %v|NUMERO %v|$", c.config.ID, fields[0], fields[1], fields[2], fields[3], fields[4]) //PONER CONSTANTES
+
+	header := fmt.Sprintf("%v %v", last, len(msg))
+	//header := fmt.Sprintf("%v ", len(msg_to_sv))
+	msg = header + msg
+	return msg
 }

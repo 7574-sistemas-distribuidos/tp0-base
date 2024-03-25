@@ -11,6 +11,7 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.active_clients = {}
         self.running = True
+        self.bets = []
         
     def handle_sigterm(self):
         logging.info("HANDLING SIGTERM")
@@ -44,21 +45,25 @@ class Server:
         client socket will also be closed
         """
         try:
-            msg = self.full_read(client_sock).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
+            chunk = self.full_read(client_sock)
+            if chunk:
+                addr = client_sock.getpeername()
+                bets_received = 0
+                for i in chunk:
+                    logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {i}')
+                    i = i.rstrip()
+                    bet = self.parse_bet(i)
+                    if bet:
+                        self.bets.append(bet)
+                        logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+                        bets_received += 1
 
-            bet = self.parse_bet(msg)
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            
 
-            if bet:
-                self.full_write(client_sock,f"ack {bet.document} {bet.number}")
-            else:
-                self.full_write(client_sock,f"err {bet.document} {bet.number}")
+                    self.full_write(client_sock,f"ack {bets_received}")
 
 
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:            
             addr = client_sock.getpeername()
             self.active_clients.pop(addr[0])
@@ -94,32 +99,57 @@ class Server:
             sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
             if sent == 0:
                 print("SOCKET CERRADO: sent = 0")
-                logging.error("action: write in socket | result: fail | error: {e}")
+                logging.error("action: write in socket | result: fail | error: sent = 0")
                 break
 
             total_sent += sent
         return total_sent      
 
     def full_read(self,sock):
-        header_len = 2 #PONER COMO CONSTANTE (len en bytes)
-        bytes_read = b''
+        min_header_len = 4 #PONER COMO CONSTANTE (len en bytes)
+        message = ""
         read = sock.recv(1024)
+        print("READ: ", read)
         if len(read) <= 0:
-            logging.error("action: read in socket | result: fail | error: {e}")
+            logging.error(f"action: read in socket | result: fail | error: {read}")
             return None
+        
+        if read and len(read) > min_header_len:
+            message += read.decode('utf-8')
+            #if first bet read is the last, return
+            msg_len, last_msg = self.get_header(message)
+            if last_msg == 1:
+                return message, last_msg
+            
+            #else, read what arrived
+            bets = message.split("&")
 
-        if read and len(read) > 2:
-            msg_len = int(read[:header_len].decode('utf-8'))
-            bytes_read += read[header_len:]
-
-            while len(bytes_read) < int(msg_len):
-                read = sock.recv(1024)
-                bytes_read += read
-                if len(read) <= 0: #codigo repetido
+            #if last bet read is not the last, keep reading
+            bet, last = self.get_header(bets[len(bets)-1])
+            while last == 0:
+                print("entro al while")
+                new = sock.recv(1024)
+                message += read.decode('utf-8')
+                if len(read) <= 0:
                     logging.error("action: read in socket | result: fail | error: {e}")
                     return None 
-                
-        return bytes_read
+                bets += new.split("&")
+                        
+
+        print("bets from read: ", bets)
+        return bets
+
+    def get_header(self, msg):
+        header = ""
+        for i in range(0,len(msg)-1):
+            if msg[i] == "|":
+                break
+            header += msg[i]
+
+        header_parts = header.split(" ")
+        msg_len = header_parts[1]
+        last_msg = header_parts[0]
+        return msg_len, last_msg
 
     def parse_bet(self, msg):
         """
@@ -141,8 +171,5 @@ class Server:
         numero = categorias[6]
 
         bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
-        bets = [bet]
-        store_bets(bets)
-        logging.info(f"action: apuesta_almacenada | result: success | dni: {documento} | numero: {numero}")
         return bet
         
