@@ -11,7 +11,7 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.active_clients = {}
         self.running = True
-        self.bets = []
+        self.total_recv = 0
         
     def handle_sigterm(self):
         logging.info("HANDLING SIGTERM")
@@ -35,7 +35,6 @@ class Server:
             if client_sock:
                 self.__handle_client_connection(client_sock)
 
-        store_bets(self.bets)
 
 
     def __handle_client_connection(self, client_sock):
@@ -47,29 +46,40 @@ class Server:
         """
         try:
             chunk = self.full_read(client_sock)
+            print("CHUNK: ",chunk)
+
             if chunk:
+                #if self.get_header(chunk[-1])[1] != 1:
+                #    new_chunk = self.full_read(client_sock)
+                #    if new_chunk:
+                #        chunk += new_chunk
                 addr = client_sock.getpeername()
-                bets_received = 0
+                bets_received = []
+            
                 for i in chunk:
                     logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {i}')
                     i = i.rstrip()
                     bet = self.parse_bet(i)
                     if bet:
-                        self.bets.append(bet)
-                        logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
-                        bets_received += 1
+                        bets_received.append(bet)
+                        self.total_recv += 1
+                        print("total bets", self.total_recv)
                     else:
                         print("BET INVALIDA")
 
+                store_bets(bets_received)
+                
+                logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
 
-                    self.full_write(client_sock,f"ack {bets_received}")
+
+                self.full_write(client_sock,f"ack {len(bets_received)}")
 
 
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:            
-            addr = client_sock.getpeername()
-            self.active_clients.pop(addr[0])
+            #addr = client_sock.getpeername()
+            #self.active_clients.pop(addr[0])
             client_sock.close()
 
 
@@ -111,14 +121,17 @@ class Server:
     def full_read(self,sock):
         min_header_len = 4 #PONER COMO CONSTANTE (len en bytes)
         message = ""
+        
         read = sock.recv(1024)
         if len(read) <= 0:
             logging.error(f"action: read in socket | result: fail | error: {read}")
             return None
-
-        if read and len(read) > min_header_len:
+        
+        if read:
             message += read.decode('utf-8')
+
             #if first bet read is the last, return
+
             msg_len, last_msg = self.get_header(message)
             if msg_len == None:
                 return None
@@ -127,18 +140,18 @@ class Server:
             
             #else, read what arrived
             bets = message.split('$')
-            bets.pop() #remove last element, which is empty
-
+            last = bets.pop() #remove last element, which is empty
             #if last bet read is not the last, keep reading
-            bet, last = self.get_header(bets[len(bets)-1])
-            while last == 0:
+            bet, flag_last = self.get_header(bets[len(bets)-1])
+            while flag_last == 0:
                 new = sock.recv(1024)
-                message += read.decode('utf-8')
-                if len(read) <= 0:
+                message += new.decode('utf-8')
+                if len(new) == 0:
                     logging.error("action: read in socket | result: fail | error: {e}")
                     return None 
-                bets += new.split("$")
-                        
+                new_bets = new.split("$")
+                bets += new_bets
+                bet, flag_last = self.get_header(new_bets[len(new_bets)-1])
 
         return bets
 

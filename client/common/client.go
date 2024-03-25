@@ -2,7 +2,9 @@ package common
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
@@ -52,17 +54,6 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func getEnvs() []string {
-	envs := []string{
-		os.Getenv("NOMBRE"),
-		os.Getenv("APELLIDO"),
-		os.Getenv("DOCUMENTO"),
-		os.Getenv("NACIMIENTO"),
-		os.Getenv("NUMERO"),
-	}
-	return envs
-}
-
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// autoincremental msgID to identify every message sent
@@ -76,6 +67,7 @@ func (c *Client) StartClientLoop() {
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
+	total_sent := 0
 
 loop:
 	// Send messages if the loopLapse threshold has not been surpassed
@@ -85,7 +77,7 @@ loop:
 			log.Infof("action: timeout_detected | result: success | client_id: %v",
 				c.config.ID,
 			)
-			break loop
+			//break loop
 
 		case <-sigchan:
 			log.Infof("CLIENTE RECIBIO SIGTERM")
@@ -99,15 +91,23 @@ loop:
 		c.createClientSocket()
 
 		// SENDING
-		batch_size := 2
+		//each bet has approximately 100 bytes
+		batch_size := 8
 		for i := 0; i < batch_size; i++ {
 			last := 0
 			if i == batch_size-1 {
 				last = 1
 			}
 			message := create_message(c, reader, last)
-			send_message(c, c.conn, message)
+			if message == "fin" {
+				log.Infof("closing: %v", c.config.ID)
 
+				break loop
+			}
+			if send_message(c, c.conn, message) != nil {
+				send_message(c, c.conn, message)
+			}
+			total_sent++
 		}
 
 		//READING
@@ -120,7 +120,7 @@ loop:
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
-
+	log.Infof("TOTAL SENT", total_sent)
 	c.conn.Close()
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
@@ -170,31 +170,32 @@ func verify_recv_error(c *Client, err error) error {
 	return nil
 }
 
-func send_message(c *Client, conn net.Conn, msg string) {
+func send_message(c *Client, conn net.Conn, msg string) error {
 	bytes_sent := 0
 	for bytes_sent < len(msg) {
 		bytes, err := fmt.Fprintf(
 			conn,
 			msg[bytes_sent:],
 		)
-		log.Infof("MSG JUST SENT: %v", msg)
 		if err != nil {
 			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v",
 				c.config.ID,
 				err,
 			)
-			conn.Close()
-			return
+			return err
 		}
 		bytes_sent += bytes
 	}
+	return nil
 }
 
 func read_csv_line(reader *bufio.Reader) string {
 	line, err := reader.ReadString('\n')
+	if errors.Is(err, io.EOF) {
+		return ""
+	}
 	if err != nil {
 		log.Fatalf("Failed to read line: %s", err)
-		return ""
 	}
 	return line
 }
@@ -206,7 +207,7 @@ func create_message(c *Client, reader *bufio.Reader, last int) string {
 
 	line := read_csv_line(reader)
 	if line == "" {
-		return "err"
+		return "fin"
 	}
 	fields := strings.Split(line, ",")
 	fields[4] = strings.TrimSuffix(fields[4], "\n")
