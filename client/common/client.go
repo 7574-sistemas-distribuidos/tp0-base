@@ -8,7 +8,6 @@ import (
     "os/signal"
     "syscall"
 	"time"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -69,38 +68,56 @@ func (c *Client) HandleSIGTERM() {
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	msgID := 1
+func (c *Client) StartClientLoop(bet Bet) {
 
-    c.HandleSIGTERM()
+	// Create the connection the server 
+	c.createClientSocket()
+    
+	// Create write and read buffer from the socket
+	writer := bufio.NewWriter(c.conn)
+	scanner := bufio.NewScanner(c.conn)
+	
+	c.HandleSIGTERM()
+
+	total_bets := 1
+	bets_sent := 0
 
 loop:
-	// Send messages if the loopLapse threshold has not been surpassed
-	for timeout := time.After(c.config.LoopLapse); ; {
-		select {
-		case <-timeout:
-	        log.Infof("action: timeout_detected | result: success | client_id: %v",
-                c.config.ID,
-            )
-			break loop
-		default:
+	for ;  ; {
+		
+		message := SerializeBet(bet)
+	
+		_, err := writer.Write(message)
+		if err != nil {
+			log.Errorf(
+				"action: send_message | result: fail | client_id: %v | error: %v", 
+				c.config.ID, 
+				err,
+			)
+			return
+		}
+	
+		// Flush the bufio.Writer to ensure that all data is sent to the socket
+		err = writer.Flush()
+		if err != nil {
+			fmt.Println("Error flushing the bufio.Writer:", err)
+			return
+		}
+		
+		// Use the scanner to read the following line of the data stream
+		if !scanner.Scan() {
+			err := scanner.Err()
+			if err != nil {
+				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+					c.config.ID,
+					err,
+				)
+				return
+			}
 		}
 
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
-
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		msgID++
-		c.conn.Close()
-
+		msg_received := scanner.Text()
+	
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
                 c.config.ID,
@@ -110,12 +127,25 @@ loop:
 		}
 		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
             c.config.ID,
-            msg,
+            msg_received,
         )
+		log.Infof("action: bet_sent | result: success | dni: %v | numero: %v",
+            bet.Document,
+            bet.Number,
+        )
+
+		bets_sent++
+
+		if bets_sent == total_bets {
+			break loop
+		}
 
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
 
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	writer.Flush()
+    scanner = nil
+	c.conn.Close()
+	log.Infof("action: finished | result: success | client_id: %v | bets_sent: %v", c.config.ID, bets_sent)
 }

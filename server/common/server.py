@@ -2,6 +2,8 @@ import socket
 import logging
 import signal
 import sys
+from common.utils import *
+from common.protocol import *
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -22,7 +24,6 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
         signal.signal(signal.SIGTERM, self.__handle_SIGTERM)
        
         # the server
@@ -38,18 +39,23 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            bet = receive_bet(client_sock)
+            store_bets([bet])
+
+            logging.info(f'action: store_bet | result: success | dni: {bet.document} | numero: {bet.number}')
+            send_ack(client_sock)
+
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error(f"action: client_disconnected | result: fail | error: {e}")
+            self.__close_socket(client_sock)
+
         finally:
-            client_sock.close()
-            # Remove socket from the list
-            self.client_sockets.remove(client_sock)
+            sock_address = client_sock.getpeername()  
+            sock_ip = sock_address[0]  
+            sock_port = sock_address[1]  
+            logging.info(f"action: finish_connection | result: success | remote_address: {sock_ip}:{sock_port}")
+
+            self.__close_socket(client_sock)
 
     def __accept_new_connection(self):
         """
@@ -78,3 +84,8 @@ class Server:
         self.client_sockets.clear()
 
         sys.exit(0)
+
+    def __close_socket(self, client_sock):
+        client_sock.close()
+        # Remove socket from the list
+        self.client_sockets.remove(client_sock)

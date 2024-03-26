@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
+	"strconv"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +35,12 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
 	v.BindEnv("log", "level")
+
+	v.BindEnv("nombre")
+	v.BindEnv("apellido")
+	v.BindEnv("documento")
+	v.BindEnv("nacimiento")
+	v.BindEnv("numero")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -108,5 +114,35 @@ func main() {
 	}
 
 	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+
+	id, err := strconv.Atoi(clientConfig.ID)
+	if err != nil {
+		log.Errorf("Error converting id to an integer: %v", err)
+		return
+	}
+
+	documentStr := v.GetString("documento")
+	document, err := strconv.Atoi(documentStr)
+	if err != nil {
+		log.Errorf("Error converting document to an integer: %v", err)
+		return
+	}
+
+	numberStr := v.GetString("numero")
+	number, err := strconv.Atoi(numberStr)
+	if err != nil {
+		log.Errorf("Error converting bet number to an integer: %v", err)
+		return
+	}
+
+	bet := common.Bet{
+		Id:        id,
+		Name:      v.GetString("nombre"),
+		LastName:  v.GetString("apellido"),
+		Document:  document,
+		Birthdate: v.GetString("nacimiento"), 
+		Number:    number,
+	}
+
+	client.StartClientLoop(bet)
 }
