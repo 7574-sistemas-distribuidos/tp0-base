@@ -1,7 +1,7 @@
 import socket
 import logging
 import signal
-from .utils import Bet, store_bets
+from .utils import Bet, store_bets, load_bets, has_won
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -11,7 +11,7 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.active_clients = {}
         self.running = True
-        self.total_recv = 0
+        self.ended = {}
         
     def handle_sigterm(self, signum, frame):
         logging.info("HANDLING SIGTERM")
@@ -49,7 +49,12 @@ class Server:
             bets = []
             message,last = self.full_read(client_sock)
             message = message.rstrip()
-            bet = self.parse_bet(message)
+            print("FIRST MESSAGE",message)
+            if message == "win":
+                self.ended[last] = client_sock
+                self.get_winners(client_sock, last)
+                return
+            bet = parse_bet(message)
             if bet:
                 bets.append(bet)
             else:
@@ -59,34 +64,35 @@ class Server:
             while message:
                 message,last = self.full_read(client_sock)
                 if message == "end":
+                    self.ended[last] = client_sock
+                    break
+                if message == "win":
+                    self.ended[last] = client_sock
+                    self.get_winners(client_sock, last)
                     break
                 if message:
                     message = message.rstrip()
-                    bet = self.parse_bet(message)
+                    bet = parse_bet(message)
                     if bet:
                         bets.append(bet)
                     else:
                         print("BET INVALIDA")
                     i += 1
-                
                 if i == batch-1:
                     break
 
             for bet in bets:
                 logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
-            store_bets(bets)               
-            self.full_write(client_sock,f"ack {len(bets)}")
-
-            self.total_recv += len(bets)
-            print("TOTAL ",self.total_recv)
+            store_bets(bets)     
+            if message != "win":   
+                self.full_write(client_sock,f"ack {len(bets)}")
 
 
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
-        finally:            
-            #addr = client_sock.getpeername()
-            #self.active_clients.pop(addr[0])
-            client_sock.close()
+        finally:
+            if client_sock not in self.ended.values():
+                client_sock.close()
 
 
     def __accept_new_connection(self):
@@ -109,11 +115,13 @@ class Server:
                 return None
 
     def full_write(self,sock, msg):
+        if msg == "win 0\n":
+            print("SENDING WINNER SENDING WINNER")
         total_sent = 0
         #header
         msg_len = str(len(msg))
         msg = msg_len + "|" + msg
-
+        print("SENDING: ", msg)
         while total_sent < len(msg):
             sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
             if sent == 0:
@@ -123,20 +131,64 @@ class Server:
 
             total_sent += sent
         return total_sent      
+    
+    def get_winners(self,sock, number): #
+        print("GET WINNERS")
+        if len(self.ended.keys()) == 1:
+            logging.info("action: get_winners | result: success")
+            bets = load_bets()
+            winners = filter(has_won, bets)
+
+            amount_of_winners = {}
+            for winner in winners:
+                print(winner.agency, winner.number) #cambiar number por dni
+                # Corrected logic: Increment wins per agency, not per number
+                if winner.agency in amount_of_winners:
+                    amount_of_winners[winner.agency] += 1
+                else:
+                    amount_of_winners[winner.agency] = 1
+
+            print("AMOUNT OF WINNERS",amount_of_winners)
+            print("ENDED",self.ended)
+            print("WINNERS",winners)
+            for client in self.ended.keys():
+                client_sock = self.ended[client]
+                if client not in amount_of_winners.keys():
+                    self.full_write(client_sock, f"win 0\n")
+                else:
+                    self.full_write(client_sock, f"win {len(amount_of_winners[client])}\n")
+                client_sock.close()
+            
+            logging.info("action: consulta_ganadores | result: success | cant_ganadores: ${CANT}")    
+
+
 
     def full_read(self,sock):
         message = ""
         msg = sock.recv(1)
         if msg == b'':
             return None, None
+        
         while msg != b"|":
             message += msg.decode('utf-8')
             msg = sock.recv(1)
 
+        print("read ",message)
+        
+        if message == "win":
+            print("LEYO MENSAJE WIN")
+            client_id = ""
+            for _ in range(1):
+                msg = sock.recv(1)
+                client_id += msg.decode('utf-8')
+            self.get_winners(sock, client_id)
+            return "win", client_id
+        
         if message == "end":
-            return "end", 1
-
-        len, last = self.get_header(message)
+            msg = sock.recv(1)
+            last = msg.decode('utf-8')
+            return "end", last
+        len, last = get_header(message)
         
         message += "|"
         
@@ -144,38 +196,41 @@ class Server:
         if msg == b'':
             return None, None
         message += payload.decode('utf-8')
+        print("MENSAJE: ",message)
         
         return message,last
 
-    def get_header(self, msg):
-        header_parts = msg.split(" ")
-        msg_len = header_parts[1]
-        last_msg = header_parts[0]
-        return msg_len, last_msg
+def parse_bet(msg):
+    """
+    The message received from the client is a string with the following format:
+    <header> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>|$
+    0/1 len
+        0         1          2          3          4           5           6
+    """        
+    categorias = msg.split("|")
+    categorias.pop() #last is always empty
+    if len(categorias) != 7:
+        return None
+    for i in range(1,len(categorias)):
+        categoria = categorias[i].split(" ")
+        categoria.pop(0)
+        categorias[i] = " ".join(categoria)
 
-    def parse_bet(self, msg):
-        """
-        The message received from the client is a string with the following format:
-        <header> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>|$
-        0/1 len
-            0         1          2          3          4           5           6
-        """        
-        categorias = msg.split("|")
-        categorias.pop() #last is always empty
-        if len(categorias) != 7:
-            return None
-        for i in range(1,len(categorias)):
-            categoria = categorias[i].split(" ")
-            categoria.pop(0)
-            categorias[i] = " ".join(categoria)
-
-        agencia = categorias[1]
-        nombre = categorias[2]
-        apellido = categorias[3]
-        documento = categorias[4]
-        nacimiento = categorias[5]
-        numero = categorias[6]
-        #print data
-        bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
-        return bet
+    agencia = categorias[1]
+    nombre = categorias[2]
+    apellido = categorias[3]
+    documento = categorias[4]
+    nacimiento = categorias[5]
+    numero = categorias[6]
+    #print data
+    bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
+    return bet
         
+    
+
+def get_header(msg):
+    header_parts = msg.split(" ")
+    msg_len = header_parts[1]
+    last_msg = header_parts[0]
+    return msg_len, last_msg
+            
