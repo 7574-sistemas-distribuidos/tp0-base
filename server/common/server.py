@@ -49,10 +49,12 @@ class Server:
             bets = []
             message,last = self.full_read(client_sock)
             message = message.rstrip()
-            print("FIRST MESSAGE",message)
             if message == "win":
                 self.ended[last] = client_sock
                 self.get_winners(client_sock, last)
+                return
+            if message == "end":
+                self.ended[last] = client_sock
                 return
             bet = parse_bet(message)
             if bet:
@@ -115,13 +117,10 @@ class Server:
                 return None
 
     def full_write(self,sock, msg):
-        if msg == "win 0\n":
-            print("SENDING WINNER SENDING WINNER")
         total_sent = 0
         #header
         msg_len = str(len(msg))
         msg = msg_len + "|" + msg
-        print("SENDING: ", msg)
         while total_sent < len(msg):
             sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
             if sent == 0:
@@ -132,36 +131,35 @@ class Server:
             total_sent += sent
         return total_sent      
     
-    def get_winners(self,sock, number): #
-        print("GET WINNERS")
-        if len(self.ended.keys()) == 1:
+    def get_winners(self,sock,last): #
+        if len(self.ended.keys()) == 2:
             logging.info("action: get_winners | result: success")
             bets = load_bets()
             winners = filter(has_won, bets)
-
+            print("ENDED", self.ended.keys() )
             amount_of_winners = {}
-            for winner in winners:
-                print(winner.agency, winner.number) #cambiar number por dni
-                # Corrected logic: Increment wins per agency, not per number
-                if winner.agency in amount_of_winners:
-                    amount_of_winners[winner.agency] += 1
+            for winner in winners: 
+                if str(winner.agency) in amount_of_winners:
+                    amount_of_winners[str(winner.agency)].append(winner.document) 
                 else:
-                    amount_of_winners[winner.agency] = 1
-
-            print("AMOUNT OF WINNERS",amount_of_winners)
-            print("ENDED",self.ended)
-            print("WINNERS",winners)
+                    amount_of_winners[str(winner.agency)] = []
+                    amount_of_winners[str(winner.agency)].append(winner.document)
+            
             for client in self.ended.keys():
                 client_sock = self.ended[client]
-                if client not in amount_of_winners.keys():
-                    self.full_write(client_sock, f"win 0\n")
+                message = "win" 
+                if client in amount_of_winners.keys():
+                    client_winners = amount_of_winners[client]
+                    message += f" {len(client_winners)} "
+                    for i in client_winners:
+                        message += " " + i
                 else:
-                    self.full_write(client_sock, f"win {len(amount_of_winners[client])}\n")
+                    message += " 0"
+                message += "\n"
+                self.full_write(client_sock, message)
                 client_sock.close()
-            
-            logging.info("action: consulta_ganadores | result: success | cant_ganadores: ${CANT}")    
-
-
+        else:
+            print("NO HAY SUFICIENTES CLIENTES")
 
     def full_read(self,sock):
         message = ""
@@ -172,11 +170,8 @@ class Server:
         while msg != b"|":
             message += msg.decode('utf-8')
             msg = sock.recv(1)
-
-        print("read ",message)
-        
+        print("MESSAGE",message)
         if message == "win":
-            print("LEYO MENSAJE WIN")
             client_id = ""
             for _ in range(1):
                 msg = sock.recv(1)
@@ -196,7 +191,6 @@ class Server:
         if msg == b'':
             return None, None
         message += payload.decode('utf-8')
-        print("MENSAJE: ",message)
         
         return message,last
 

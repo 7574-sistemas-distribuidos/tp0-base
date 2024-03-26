@@ -61,7 +61,7 @@ func (c *Client) StartClientLoop() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
-	filename := "agency-" + "4" + ".csv"
+	filename := "agency-" + c.config.ID + ".csv"
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("Failed to open file: %s", err)
@@ -102,12 +102,10 @@ loop:
 			}
 			message := create_message(c, reader, last)
 			if message == "fin" {
-				log.Infof("finished reading: %v", c.config.ID)
 				message := "end|" + c.config.ID
 				send_message(c, c.conn, message)
 				answer := read_message(c, c.conn)
 				if interpret_sv_answer(c, answer, &ack) != "" {
-					log.Infof("closing: %v", c.config.ID)
 					return
 				}
 				finished = true
@@ -129,14 +127,13 @@ loop:
 	} else {
 		c.createClientSocket()
 		request_winner(c)
-		winners := read_message(c, c.conn)
+		winners := read_win_message(c, c.conn)
 		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", winners)
 	}
 }
 
 func interpret_sv_answer(c *Client, sv_answer string, ack *int) string {
 	answer := strings.Split(sv_answer, " ")
-	log.Infof("answer: %v", answer)
 	if answer[0] == "err" {
 		log.Infof("closing: %v", c.config.ID)
 		return answer[1]
@@ -147,33 +144,64 @@ func interpret_sv_answer(c *Client, sv_answer string, ack *int) string {
 		if err != nil {
 			log.Fatalf("Failed to convert amount to int: %s", err)
 		}
-		log.Infof(" ACK BEFORE: %v", *ack)
 		*ack += amount
-		log.Infof(" ACK AFTER: %v", *ack)
 	}
 	if answer[0] == "|win" {
-		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", answer[1])
+		ganadores := ""
+		for i := 1; i < len(answer); i++ {
+			ganadores += answer[i] + " "
+		}
+		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", ganadores)
 	}
 	return ""
 }
 
 func request_winner(c *Client) {
 	message := "win|" + c.config.ID
-	log.Infof("win message: %v", message)
+	log.Infof("REQUESTING WINNER : client_id: %v", c.config.ID)
 	msg := send_message(c, c.conn, message)
 	if msg != nil {
 		log.Fatalf("Failed to send message: %s", msg)
 	}
-	log.Infof("ENTRANDO A READ MESSAGE WINNERS")
+}
+
+func read_win_message(c *Client, conn net.Conn) string {
+	//igual que read message pero con busy wait
+	//bytes_read := 0
+	reader := bufio.NewReader(conn)
+	recv, err := reader.ReadString('\n')
+
+	for len(recv) == 0 {
+		recv, err = reader.ReadString('\n')
+	}
+
+	if verify_recv_error(c, err) != nil {
+		return err.Error()
+	}
+	header := ""
+	for i := 0; i < len(recv); i++ {
+
+		if recv[i] != '|' {
+			header += string(recv[i])
+		} else {
+			break
+		}
+	}
+	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
+		c.config.ID,
+		recv,
+	)
+	// Return the message without the header
+	return recv[len(header):]
 }
 
 func read_message(c *Client, conn net.Conn) string {
 	bytes_read := 0
 	reader := bufio.NewReader(conn)
 	recv, err := reader.ReadString('\n')
-	log.Infof("recv: %v, len recv %v", recv, len(recv))
-
-	recv = recv[:len(recv)-1]
+	if len(recv) > 0 {
+		recv = recv[:len(recv)-1]
+	}
 	if verify_recv_error(c, err) != nil {
 		return err.Error()
 	}
@@ -217,7 +245,6 @@ func verify_recv_error(c *Client, err error) error {
 }
 
 func send_message(c *Client, conn net.Conn, msg string) error {
-	log.Infof("msg: %v", msg)
 	bytes_sent := 0
 	for bytes_sent < len(msg) {
 		bytes, err := fmt.Fprintf(

@@ -18,10 +18,25 @@ services:
     image: client:latest
     volumes:
       - ./client/config.yaml:/config.yaml
-      - .data/dataset/agency-4.csv:/agency-4.csv
+      - .data/dataset/agency-5.csv:/agency-1.csv
     entrypoint: /client
     environment:
       - CLI_ID=1
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
+  client2:
+    container_name: client2
+    image: client:latest
+    volumes:
+      - ./client/config.yaml:/config.yaml
+      - .data/dataset/agency-4.csv:/agency-2.csv
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
