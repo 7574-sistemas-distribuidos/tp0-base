@@ -129,6 +129,7 @@ loop:
 		request_winner(c)
 		winners := read_win_message(c, c.conn)
 		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", winners)
+		c.conn.Close()
 	}
 }
 
@@ -172,6 +173,7 @@ func read_win_message(c *Client, conn net.Conn) string {
 	recv, err := reader.ReadString('\n')
 
 	for len(recv) == 0 {
+		log.Infof("waiting for winners")
 		recv, err = reader.ReadString('\n')
 	}
 
@@ -192,6 +194,7 @@ func read_win_message(c *Client, conn net.Conn) string {
 		recv,
 	)
 	// Return the message without the header
+	recv = strings.TrimSuffix(recv, "\n")
 	return recv[len(header):]
 }
 

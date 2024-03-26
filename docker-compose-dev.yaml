@@ -18,7 +18,7 @@ services:
     image: client:latest
     volumes:
       - ./client/config.yaml:/config.yaml
-      - .data/dataset/agency-5.csv:/agency-1.csv
+      - .data/dataset/agency-1.csv:/agency-1.csv
     entrypoint: /client
     environment:
       - CLI_ID=1
@@ -33,10 +33,55 @@ services:
     image: client:latest
     volumes:
       - ./client/config.yaml:/config.yaml
-      - .data/dataset/agency-4.csv:/agency-2.csv
+      - .data/dataset/agency-2.csv:/agency-2.csv
     entrypoint: /client
     environment:
       - CLI_ID=2
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
+  client3:
+    container_name: client3
+    image: client:latest
+    volumes:
+      - ./client/config.yaml:/config.yaml
+      - .data/dataset/agency-3.csv:/agency-3.csv
+    entrypoint: /client
+    environment:
+      - CLI_ID=3
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
+  client4:
+    container_name: client4
+    image: client:latest
+    volumes:
+      - ./client/config.yaml:/config.yaml
+      - .data/dataset/agency-4.csv:/agency-4.csv
+    entrypoint: /client
+    environment:
+      - CLI_ID=4
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    depends_on:
+      - server
+
+  client5:
+    container_name: client5
+    image: client:latest
+    volumes:
+      - ./client/config.yaml:/config.yaml
+      - .data/dataset/agency-5.csv:/agency-5.csv
+    entrypoint: /client
+    environment:
+      - CLI_ID=5
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net

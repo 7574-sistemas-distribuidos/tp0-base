@@ -11,7 +11,8 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.active_clients = {}
         self.running = True
-        self.ended = {}
+        self.ended = 0
+        self.ready = {}
         
     def handle_sigterm(self, signum, frame):
         logging.info("HANDLING SIGTERM")
@@ -34,7 +35,7 @@ class Server:
             client_sock = self.__accept_new_connection()
             if client_sock:
                 self.__handle_client_connection(client_sock)
-
+        self._server_socket.close()
 
 
     def __handle_client_connection(self, client_sock):
@@ -50,11 +51,10 @@ class Server:
             message,last = self.full_read(client_sock)
             message = message.rstrip()
             if message == "win":
-                self.ended[last] = client_sock
                 self.get_winners(client_sock, last)
                 return
             if message == "end":
-                self.ended[last] = client_sock
+                self.ended +=1
                 return
             bet = parse_bet(message)
             if bet:
@@ -65,12 +65,11 @@ class Server:
             i = 0
             while message:
                 message,last = self.full_read(client_sock)
-                if message == "end":
-                    self.ended[last] = client_sock
-                    break
                 if message == "win":
-                    self.ended[last] = client_sock
                     self.get_winners(client_sock, last)
+                    break
+                if message == "end":
+                    self.ended +=1
                     break
                 if message:
                     message = message.rstrip()
@@ -93,7 +92,7 @@ class Server:
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
-            if client_sock not in self.ended.values():
+            if client_sock not in self.ready.values():
                 client_sock.close()
 
 
@@ -113,7 +112,6 @@ class Server:
                 self.active_clients[addr[0]] = c
                 return c
             except:
-                logging.error("SOCKET CERRADO")
                 return None
 
     def full_write(self,sock, msg):
@@ -132,11 +130,12 @@ class Server:
         return total_sent      
     
     def get_winners(self,sock,last): #
-        if len(self.ended.keys()) == 2:
+        self.ready[last] = sock
+
+        if self.ended == 5:
             logging.info("action: get_winners | result: success")
             bets = load_bets()
             winners = filter(has_won, bets)
-            print("ENDED", self.ended.keys() )
             amount_of_winners = {}
             for winner in winners: 
                 if str(winner.agency) in amount_of_winners:
@@ -145,8 +144,8 @@ class Server:
                     amount_of_winners[str(winner.agency)] = []
                     amount_of_winners[str(winner.agency)].append(winner.document)
             
-            for client in self.ended.keys():
-                client_sock = self.ended[client]
+            for client in self.ready.keys():
+                client_sock = self.ready[client]
                 message = "win" 
                 if client in amount_of_winners.keys():
                     client_winners = amount_of_winners[client]
@@ -158,8 +157,8 @@ class Server:
                 message += "\n"
                 self.full_write(client_sock, message)
                 client_sock.close()
-        else:
-            print("NO HAY SUFICIENTES CLIENTES")
+            
+            self.running = False
 
     def full_read(self,sock):
         message = ""
@@ -170,7 +169,6 @@ class Server:
         while msg != b"|":
             message += msg.decode('utf-8')
             msg = sock.recv(1)
-        print("MESSAGE",message)
         if message == "win":
             client_id = ""
             for _ in range(1):
