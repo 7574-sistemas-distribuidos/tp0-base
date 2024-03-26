@@ -59,11 +59,9 @@ class Server:
             bet = parse_bet(message)
             if bet:
                 bets.append(bet)
-            else:
-                print("BET INVALIDA")
-            
+
             i = 0
-            while message:
+            while message and self.running:
                 message,last = self.full_read(client_sock)
                 if message == "win":
                     self.get_winners(client_sock, last)
@@ -85,7 +83,7 @@ class Server:
             for bet in bets:
                 logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
             store_bets(bets)     
-            if message != "win":   
+            if message != "win": 
                 self.full_write(client_sock,f"ack {len(bets)}")
 
 
@@ -131,34 +129,34 @@ class Server:
     
     def get_winners(self,sock,last): #
         self.ready[last] = sock
-
-        if self.ended == 5:
-            logging.info("action: get_winners | result: success")
-            bets = load_bets()
-            winners = filter(has_won, bets)
-            amount_of_winners = {}
-            for winner in winners: 
-                if str(winner.agency) in amount_of_winners:
-                    amount_of_winners[str(winner.agency)].append(winner.document) 
-                else:
-                    amount_of_winners[str(winner.agency)] = []
-                    amount_of_winners[str(winner.agency)].append(winner.document)
-            
-            for client in self.ready.keys():
-                client_sock = self.ready[client]
-                message = "win" 
-                if client in amount_of_winners.keys():
-                    client_winners = amount_of_winners[client]
-                    message += f" {len(client_winners)} "
-                    for i in client_winners:
-                        message += " " + i
-                else:
-                    message += " 0"
-                message += "\n"
-                self.full_write(client_sock, message)
-                client_sock.close()
-            
-            self.running = False
+        if self.ended < 5:
+            return
+        
+        logging.info("action: get_winners | result: success")
+        bets = load_bets()
+        winners = filter(has_won, bets)
+        amount_of_winners = {}
+        for winner in winners: 
+            if str(winner.agency) in amount_of_winners:
+                amount_of_winners[str(winner.agency)].append(winner.document) 
+            else:
+                amount_of_winners[str(winner.agency)] = []
+                amount_of_winners[str(winner.agency)].append(winner.document)
+        
+        for client in self.ready.keys():
+            client_sock = self.ready[client]
+            message = "win" 
+            if client in amount_of_winners.keys():
+                client_winners = amount_of_winners[client]
+                message += f" {len(client_winners)} "
+                for i in client_winners:
+                    message += " " + i
+            else:
+                message += " 0"
+            message += "\n"
+            self.full_write(client_sock, message)
+    
+        self.running = False  # Stop the server loop
 
     def full_read(self,sock):
         message = ""
