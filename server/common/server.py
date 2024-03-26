@@ -11,9 +11,9 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.active_clients = {}
         self.running = True
-        self.bets = []
+        self.total_recv = 0
         
-    def handle_sigterm(self):
+    def handle_sigterm(self, signum, frame):
         logging.info("HANDLING SIGTERM")
         self.running = False
         for client in self.active_clients.values():
@@ -35,7 +35,7 @@ class Server:
             if client_sock:
                 self.__handle_client_connection(client_sock)
 
-        store_bets(self.bets) 
+
 
     def __handle_client_connection(self, client_sock):
         """
@@ -45,37 +45,47 @@ class Server:
         client socket will also be closed
         """
         try:
-            read = self.full_read(client_sock)
-            if read:
-                msg = read.rstrip().decode('utf-8')
-                addr = client_sock.getpeername()
-                messages = msg.split("$")
-
-                messages.pop()
-                size_of_batch = int(read[0]) # read.count($)
-                for i in range(0,len(messages)):
-                    bet = self.parse_bet(messages[i])
-                    self.bets.append(bet)    
-                
-                #if len(bets) == size_of_batch:
-                self.full_write(client_sock,f"ack {size_of_batch}")
-                
-                logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
-
-
-                #else:
-                #    self.full_write(client_sock,f"err {len(bets)}")
-
-                logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            batch = 8
+            bets = []
+            message,last = self.full_read(client_sock)
+            message = message.rstrip()
+            bet = self.parse_bet(message)
+            if bet:
+                bets.append(bet)
+            else:
+                print("BET INVALIDA")
             
+            i = 0
+            while message:
+                message,last = self.full_read(client_sock)
+                if message == "end":
+                    break
+                if message:
+                    message = message.rstrip()
+                    bet = self.parse_bet(message)
+                    if bet:
+                        bets.append(bet)
+                    else:
+                        print("BET INVALIDA")
+                    i += 1
+                
+                if i == batch-1:
+                    break
 
+            for bet in bets:
+                logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+            store_bets(bets)               
+            self.full_write(client_sock,f"ack {len(bets)}")
+
+            self.total_recv += len(bets)
+            print("TOTAL ",self.total_recv)
 
 
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
-        finally:           
-            addr = client_sock.getpeername()
-            self.active_clients.pop(addr[0])
+            logging.error(f"action: receive_message | result: fail | error: {e}")
+        finally:            
+            #addr = client_sock.getpeername()
+            #self.active_clients.pop(addr[0])
             client_sock.close()
 
 
@@ -108,44 +118,52 @@ class Server:
             sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
             if sent == 0:
                 print("SOCKET CERRADO: sent = 0")
-                logging.error("action: write in socket | result: fail | error: {e}")
+                logging.error("action: write in socket | result: fail | error: sent = 0")
                 break
 
             total_sent += sent
         return total_sent      
 
     def full_read(self,sock):
-        header_len = 1 #PONER COMO CONSTANTE (len en bytes)
-        bytes_read = b''
-        read = sock.recv(1024)
-        if len(read) <= 0:
-            logging.error("action: read in socket | result: fail | error: {e}")
-            return None
+        message = ""
+        msg = sock.recv(1)
+        if msg == b'':
+            return None, None
+        while msg != b"|":
+            message += msg.decode('utf-8')
+            msg = sock.recv(1)
 
-        if read and len(read) > 2:
-            msg_len = int(read[:header_len].decode('utf-8'))
-            bytes_read += read
+        if message == "end":
+            return "end", 1
 
-            remaining = msg_len - len(bytes_read)
+        len, last = self.get_header(message)
+        
+        message += "|"
+        
+        payload = sock.recv(int(len)-1)
+        if msg == b'':
+            return None, None
+        message += payload.decode('utf-8')
+        
+        return message,last
 
-            while len(bytes_read) < int(msg_len):
-                read = sock.recv(remaining)
-                bytes_read += read
-                remaining = msg_len - len(bytes_read)
-                if len(read) <= 0: #codigo repetido
-                    logging.error("action: read in socket | result: fail | error: {e}")
-                    return None 
-                
-        return bytes_read
+    def get_header(self, msg):
+        header_parts = msg.split(" ")
+        msg_len = header_parts[1]
+        last_msg = header_parts[0]
+        return msg_len, last_msg
 
     def parse_bet(self, msg):
         """
         The message received from the client is a string with the following format:
-        <len> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>
-          0         1          2          3          4           5          6
+        <header> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>|$
+        0/1 len
+            0         1          2          3          4           5           6
         """        
-    
         categorias = msg.split("|")
+        categorias.pop() #last is always empty
+        if len(categorias) != 7:
+            return None
         for i in range(1,len(categorias)):
             categoria = categorias[i].split(" ")
             categoria.pop(0)
@@ -157,7 +175,7 @@ class Server:
         documento = categorias[4]
         nacimiento = categorias[5]
         numero = categorias[6]
-
+        #print data
         bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
         return bet
         

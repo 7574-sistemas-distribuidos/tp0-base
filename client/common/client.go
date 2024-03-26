@@ -2,7 +2,9 @@ package common
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
@@ -66,7 +68,9 @@ func (c *Client) StartClientLoop() {
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
-
+	total_sent := 0
+	ack := 0
+loop:
 	// Send messages if the loopLapse threshold has not been surpassed
 	for timeout := time.After(c.config.LoopLapse); ; {
 		select {
@@ -74,77 +78,124 @@ func (c *Client) StartClientLoop() {
 			log.Infof("action: timeout_detected | result: success | client_id: %v",
 				c.config.ID,
 			)
-			return
+			//break loop
 
 		case <-sigchan:
 			log.Infof("CLIENTE RECIBIO SIGTERM")
 			c.conn.Close()
-			return
+			break loop
 
 		default:
 		}
 
 		// Create the connection the server in every loop iteration. Send an
-
 		c.createClientSocket()
 
 		// SENDING
-		batch_size := 02
+		//each bet has approximately 100 bytes
+		batch_size := 8
 		for i := 0; i < batch_size; i++ {
-			msg_to_sv := fmt.Sprintf("%v", batch_size)
-			msg_to_sv += create_message(c, reader)
-			send_message(c, c.conn, msg_to_sv)
+			last := 0
+			if i == batch_size-1 {
+				last = 1
+			}
+			message := create_message(c, reader, last)
+			if message == "fin" {
+				send_message(c, c.conn, "end|")
+				log.Infof("finished reading: %v", c.config.ID)
+				break loop
+			}
+			send_message(c, c.conn, message)
+			total_sent++
 		}
 
 		//READING
 		sv_answer := read_message(c, c.conn)
 		answer := strings.Split(sv_answer, " ")
 		if answer[0] == "err" {
-			c.conn.Close()
-			return
+			log.Infof("closing: %v", c.config.ID)
+			break loop
 		}
+
+		amount, err := strconv.Atoi(answer[1])
+		if err != nil {
+			log.Fatalf("Failed to convert amount to int: %s", err)
+		}
+		ack += amount
+
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
-		c.conn.Close()
-
-		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	}
+	log.Infof("TOTAL SENT %v", total_sent)
+	//send "end"
+	if ack < total_sent {
+		sv_answer := read_message(c, c.conn)
+		answer := strings.Split(sv_answer, " ")
+		if answer[0] == "err" {
+			log.Infof("closing: %v", c.config.ID)
+		}
+		//answer 1 to int
+		amount, _ := strconv.Atoi(answer[1])
+		ack += amount
+	}
+	// print ack and total sent
+	fmt.Println("ACK: ", ack, " TOTAL SENT: ", total_sent)
+	// Close the connection
+
+	c.conn.Close()
+
+	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
 func read_message(c *Client, conn net.Conn) string {
 	bytes_read := 0
 	reader := bufio.NewReader(conn)
 	recv, err := reader.ReadString('\n')
-	verify_recv_error(c, err)
-	bytes_read += len(recv)
+	recv = recv[:len(recv)-1]
+	if verify_recv_error(c, err) != nil {
+		return err.Error()
+	}
 
-	header, err := strconv.Atoi(recv[:2])
-	for bytes_read < header+2 {
+	bytes_read += len(recv)
+	min_header_len := 2
+	for bytes_read < min_header_len {
 		read, err := reader.ReadString('\n')
-		verify_recv_error(c, err)
+		if verify_recv_error(c, err) != nil {
+			return err.Error()
+		}
 		bytes_read += len(read)
+	}
+
+	header := ""
+	for i := 0; i < len(recv); i++ {
+		if recv[i] != '|' {
+			header += string(recv[i])
+		} else {
+			break
+		}
 	}
 	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 		c.config.ID,
 		recv,
 	)
 	// Return the message without the header
-	return recv[3:]
+	//log.Infof("MSG without header: %v", recv[len(header):])
+	return recv[len(header):]
 }
 
-func verify_recv_error(c *Client, err error) {
+func verify_recv_error(c *Client, err error) error {
 	if err != nil {
 		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
 			c.config.ID,
 			err,
 		)
-		return
+		return err
 	}
+	return nil
 }
 
-func send_message(c *Client, conn net.Conn, msg string) {
+func send_message(c *Client, conn net.Conn, msg string) error {
 	bytes_sent := 0
-	log.Infof("ABOUT TO SEND: msg: %v", msg)
 	for bytes_sent < len(msg) {
 		bytes, err := fmt.Fprintf(
 			conn,
@@ -155,34 +206,40 @@ func send_message(c *Client, conn net.Conn, msg string) {
 				c.config.ID,
 				err,
 			)
-			conn.Close()
-			return
+			return err
 		}
 		bytes_sent += bytes
 	}
+	return nil
 }
 
 func read_csv_line(reader *bufio.Reader) string {
 	line, err := reader.ReadString('\n')
+	if errors.Is(err, io.EOF) {
+		return ""
+	}
 	if err != nil {
 		log.Fatalf("Failed to read line: %s", err)
-		return ""
 	}
 	return line
 }
 
-func create_message(c *Client, reader *bufio.Reader) string {
-	msg_to_sv := ""
+func create_message(c *Client, reader *bufio.Reader, last int) string {
+	// HEADER 				BODY
+	// len(msg) last msg(0/1) | msg
+	msg := ""
 
 	line := read_csv_line(reader)
 	if line == "" {
-		return "err"
+		return "fin"
 	}
 	fields := strings.Split(line, ",")
 	fields[4] = strings.TrimSuffix(fields[4], "\n")
 	fields[4] = strings.TrimSuffix(fields[4], "\r")
-	msg_to_sv += fmt.Sprintf("|AGENCIA %v|NOMBRE %v|APELLIDO %v|DNI %v|NACIMIENTO %v|NUMERO %v|$", c.config.ID, fields[0], fields[1], fields[2], fields[3], fields[4]) //PONER CONSTANTES
+	msg += fmt.Sprintf("|AGENCIA %v|NOMBRE %v|APELLIDO %v|DNI %v|NACIMIENTO %v|NUMERO %v|$", c.config.ID, fields[0], fields[1], fields[2], fields[3], fields[4]) //PONER CONSTANTES
+
+	header := fmt.Sprintf("%v %v", last, len(msg))
 	//header := fmt.Sprintf("%v ", len(msg_to_sv))
-	//msg_to_sv = header + msg_to_sv
-	return msg_to_sv
+	msg = header + msg
+	return msg
 }
