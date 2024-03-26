@@ -2,12 +2,15 @@ package common
 
 import (
 	"bufio"
+	"encoding/csv"
 	"fmt"
 	"net"
 	"os"
     "os/signal"
     "syscall"
+	"strconv"
 	"time"
+	"path/filepath"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,6 +20,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopLapse     time.Duration
 	LoopPeriod    time.Duration
+	ChunkSize     int
 }
 
 // Client Entity that encapsulates how
@@ -50,6 +54,29 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) CloseClient(writer *bufio.Writer, scanner *bufio.Scanner) {
+	// Indicate to the server that there are no more bets
+	zeroBets := SerializeNoMoreBets()
+
+	_, err := writer.Write(zeroBets)
+	if err != nil {
+		log.Errorf(
+			"action: send_message | result: fail | client_id: %v | error: %v", 
+			c.config.ID, 
+			err,
+		)
+	}
+
+	// Release resources
+	err = writer.Flush()
+	if err != nil {
+		log.Errorf("Error flushing the bufio.Writer: %v", err)
+	}
+	scanner = nil
+
+	c.conn.Close()
+}
+
 func (c *Client) HandleSIGTERM() {
     // Make a channel to receive SIGTERM 
     sigCh := make(chan os.Signal, 1)
@@ -68,56 +95,72 @@ func (c *Client) HandleSIGTERM() {
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop(bet Bet) {
+func (c *Client) StartClientLoop() {
+
+	c.HandleSIGTERM()
 
 	// Create the connection the server 
 	c.createClientSocket()
+
+	// Open file
+	fileName := "agency-" + c.config.ID + ".csv"
+	dataDir := filepath.Join("/.data") 
+	filePath := filepath.Join(dataDir, fileName)
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Printf("Error opening the file: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	// New reader
+	reader := csv.NewReader(file)
     
 	// Create write and read buffer from the socket
 	writer := bufio.NewWriter(c.conn)
 	scanner := bufio.NewScanner(c.conn)
-	
-	c.HandleSIGTERM()
 
-	total_bets := 1
+	defer c.CloseClient(writer, scanner)
+
 	bets_sent := 0
 
+	id, err := strconv.Atoi(c.config.ID)
+	if err != nil {
+		log.Errorf(
+			"Error converting id to an integer %v", err, 
+		)
+		return 
+	}
+
+
 loop:
-	for ;  ; {
-		
-		message := SerializeBet(bet)
-	
-		_, err := writer.Write(message)
+	// Send messages if the loopLapse threshold has not been surpassed
+	for ; ; {
+
+		bets, err := ProcessCSV(reader, c.config.ChunkSize, id)
 		if err != nil {
-			log.Errorf(
-				"action: send_message | result: fail | client_id: %v | error: %v", 
-				c.config.ID, 
-				err,
-			)
+			fmt.Println("%v", err)
 			return
-		}
-	
-		// Flush the bufio.Writer to ensure that all data is sent to the socket
-		err = writer.Flush()
-		if err != nil {
-			fmt.Println("Error flushing the bufio.Writer:", err)
-			return
-		}
-		
-		// Use the scanner to read the following line of the data stream
-		if !scanner.Scan() {
-			err := scanner.Err()
-			if err != nil {
-				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-					c.config.ID,
-					err,
-				)
-				return
-			}
 		}
 
-		msg_received := scanner.Text()
-	
+		message, err := SerializeBets(bets)
+		if err != nil {
+			fmt.Println("%v", err)
+			return
+		}
+
+		err = SendMessage(id, writer, message)
+		if err != nil {
+			fmt.Println("%v", err)
+			return
+		}
+
+		msg_received, err := ReceiveMessage(id, scanner)
+		if err != nil {
+			fmt.Println("%v", err)
+			return
+		}
+
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
                 c.config.ID,
@@ -129,14 +172,18 @@ loop:
             c.config.ID,
             msg_received,
         )
-		log.Infof("action: bet_sent | result: success | dni: %v | numero: %v",
-            bet.Document,
-            bet.Number,
-        )
 
-		bets_sent++
+		chunkSize := len(bets)
 
-		if bets_sent == total_bets {
+		bets_sent = bets_sent + chunkSize
+
+		log.Infof("action: bets_sent | result: success | total_bets_sent: %v | bets_sent: %v ",
+			bets_sent,
+			chunkSize,
+		)
+
+		// EOF was reached
+		if chunkSize != c.config.ChunkSize {
 			break loop
 		}
 
@@ -144,8 +191,5 @@ loop:
 		time.Sleep(c.config.LoopPeriod)
 	}
 
-	writer.Flush()
-    scanner = nil
-	c.conn.Close()
 	log.Infof("action: finished | result: success | client_id: %v | bets_sent: %v", c.config.ID, bets_sent)
 }

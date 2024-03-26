@@ -20,11 +20,6 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NOMBRE=Mirtha
-      - CLI_APELLIDO=Passet
-      - CLI_DOCUMENTO=21894271
-      - CLI_NACIMIENTO=1951-09-27
-      - CLI_NUMERO=1234
     volumes:
       - ./client/config.yaml:/config/client/config.yaml
     networks:
@@ -39,11 +34,6 @@ services:
     environment:
       - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NOMBRE=Santiago Lionel
-      - CLI_APELLIDO=Lorca
-      - CLI_DOCUMENTO=30904465
-      - CLI_NACIMIENTO=1999-03-17
-      - CLI_NUMERO=7574
     volumes:
       - ./client/config.yaml:/config/client/config.yaml
     networks:
@@ -58,11 +48,6 @@ services:
     environment:
       - CLI_ID=3
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NOMBRE=Gladys
-      - CLI_APELLIDO=Rodríguez
-      - CLI_DOCUMENTO=30564132
-      - CLI_NACIMIENTO=1985-07-12
-      - CLI_NUMERO=7894
     volumes:
       - ./client/config.yaml:/config/client/config.yaml
     networks:
@@ -77,11 +62,6 @@ services:
     environment:
       - CLI_ID=4
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NOMBRE=Gladys
-      - CLI_APELLIDO=Rodríguez
-      - CLI_DOCUMENTO=31528467
-      - CLI_NACIMIENTO=1989-12-18
-      - CLI_NUMERO=8520
     volumes:
       - ./client/config.yaml:/config/client/config.yaml
     networks:
@@ -96,11 +76,6 @@ services:
     environment:
       - CLI_ID=5
       - CLI_LOG_LEVEL=DEBUG
-      - CLI_NOMBRE=Roberto
-      - CLI_APELLIDO=Silatro
-      - CLI_DOCUMENTO=25789123
-      - CLI_NACIMIENTO=1978-10-03
-      - CLI_NUMERO=4444
     volumes:
       - ./client/config.yaml:/config/client/config.yaml
     networks:

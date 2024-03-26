@@ -42,6 +42,8 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("nacimiento")
 	v.BindEnv("numero")
 
+	v.BindEnv("chunks", "size")
+
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
 	// can be loaded from the environment variables so we shouldn't
@@ -90,6 +92,7 @@ func PrintConfig(v *viper.Viper) {
 	    v.GetDuration("loop.lapse"),
 	    v.GetDuration("loop.period"),
 	    v.GetString("log.level"),
+		v.GetString("chunk.size"),
     )
 }
 
@@ -106,43 +109,23 @@ func main() {
 	// Print program config with debugging purposes
 	PrintConfig(v)
 
+	ChunkSizeStr := v.GetString("chunks.size")
+	ChunkSize, err := strconv.Atoi(ChunkSizeStr)
+	if err != nil {
+		log.Errorf("Error converting chunk.size to an integer: %v", err)
+		return
+	}
+
+
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
+		ChunkSize:     ChunkSize,
 	}
 
 	client := common.NewClient(clientConfig)
 
-	id, err := strconv.Atoi(clientConfig.ID)
-	if err != nil {
-		log.Errorf("Error converting id to an integer: %v", err)
-		return
-	}
-
-	documentStr := v.GetString("documento")
-	document, err := strconv.Atoi(documentStr)
-	if err != nil {
-		log.Errorf("Error converting document to an integer: %v", err)
-		return
-	}
-
-	numberStr := v.GetString("numero")
-	number, err := strconv.Atoi(numberStr)
-	if err != nil {
-		log.Errorf("Error converting bet number to an integer: %v", err)
-		return
-	}
-
-	bet := common.Bet{
-		Id:        id,
-		Name:      v.GetString("nombre"),
-		LastName:  v.GetString("apellido"),
-		Document:  document,
-		Birthdate: v.GetString("nacimiento"), 
-		Number:    number,
-	}
-
-	client.StartClientLoop(bet)
+	client.StartClientLoop()
 }

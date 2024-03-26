@@ -39,11 +39,15 @@ class Server:
         client socket will also be closed
         """
         try:
-            bet = receive_bet(client_sock)
-            store_bets([bet])
+            while True:
+                bets = receive_bets(client_sock)
+                if bets == []:
+                    break
 
-            logging.info(f'action: store_bet | result: success | dni: {bet.document} | numero: {bet.number}')
-            send_ack(client_sock)
+                store_bets(bets)
+
+                logging.info(f'action: store_bets | result: success | total_bets: {len(bets)}')
+                send_ack(client_sock)
 
         except OSError as e:
             logging.error(f"action: client_disconnected | result: fail | error: {e}")

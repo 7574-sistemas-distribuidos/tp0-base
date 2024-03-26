@@ -1,53 +1,39 @@
 package common
 
 import (
-    "encoding/binary"
+	"bufio"
+	"fmt"
 )
 
-type Bet struct {
-	Id        int
-	Name      string    
-	LastName  string    
-	Document  int       
-	Birthdate string
-	Number    int       
+// Send bets to the server
+func SendMessage(id int, writer *bufio.Writer, message []byte) error {
+	bytes_sent, err := writer.Write(message)
+	if err != nil {
+		return fmt.Errorf("action: send_message | result: fail | client_id: %v | error: %v", id, err)
+	}
+
+	// Flush the bufio.Writer to ensure that all data is sent to the socket
+	err = writer.Flush()
+	if err != nil {
+		return fmt.Errorf("Error flushing the bufio.Writer: %v", err)
+	}
+
+	if bytes_sent != len(message) {
+		return fmt.Errorf("Error not all bytes were sent: %v / %v", bytes_sent, len(message))
+	}
+
+	return nil
 }
 
-//  |- Id -|------ Name ------|------ LastName ------|- Document -|--  Birthdate --|- Number -|
-//  |- 4b -|------  24b ------|------   24b    ------|-    4b    -|--    10b     --|-   4b   -|
-func SerializeBet(bet Bet) []byte {
-	buf := make([]byte, 0)
+// Receives an ACK from the server
+func ReceiveMessage(id int, scanner *bufio.Scanner) (string, error) {
+	// Use the scanner to read the following line of the data stream
+	if !scanner.Scan() {
+		err := scanner.Err()
+		if err != nil {
+			return "", fmt.Errorf("action: receive_message | result: fail | client_id: %v | error: %v", id, err)
+		}
+	}
 
-	// Id
-	idBytes := make([]byte, 4) 
-	binary.BigEndian.PutUint32(idBytes, uint32(bet.Id))
-
-	// Name
-	nameBytes := make([]byte, 24) 
-	copy(nameBytes, []byte(bet.Name))
-
-	// LastName
-	lastNameBytes := make([]byte, 24) 
-	copy(lastNameBytes, []byte(bet.LastName))
-
-	// Document
-	documentBytes := make([]byte, 4) 
-	binary.BigEndian.PutUint32(documentBytes, uint32(bet.Document))
-
-	// Birthdate
-	birthdateBytes := make([]byte, 10) 
-	copy(birthdateBytes, []byte(bet.Birthdate))
-
-	// Number
-	numberBytes := make([]byte, 4) 
-	binary.BigEndian.PutUint32(numberBytes, uint32(bet.Number))
-
-	buf = append(buf, idBytes...)
-	buf = append(buf, nameBytes...)
-	buf = append(buf, lastNameBytes...)
-	buf = append(buf, documentBytes...)
-	buf = append(buf, birthdateBytes...)
-	buf = append(buf, numberBytes...)
-
-	return buf
+	return scanner.Text(), nil
 }

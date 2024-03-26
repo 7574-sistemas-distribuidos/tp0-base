@@ -3,6 +3,8 @@ server:
   address: "server:12345"
 loop:
   lapse: "0m20s"
-  period: "5s"
+  period: "2s"
 log:
   level: "info"
+chunks:
+  size: 100

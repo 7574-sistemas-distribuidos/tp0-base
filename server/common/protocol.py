@@ -35,6 +35,27 @@ def receive_bet(socket):
 
     return bet
 
+def receive_bets(socket):
+    
+    # First 4 bytes indicate number of bets to be received
+    num_bets_data = socket.recv(4)
+    if not num_bets_data:
+        raise OSError("Client disconnected")
+
+    num_bets = struct.unpack("!I", num_bets_data)[0]
+
+    bets = []
+
+    # Client has no more bets to send
+    if num_bets == 0:
+        return bets
+
+    for _ in range(num_bets):
+        bet = receive_bet(socket)
+        bets.append(bet)
+
+    return bets    
+
 def send_ack(socket):
     # Send ACK
-    socket.send("ACK".encode('utf-8'))
+    socket.send("ACK\n".encode('utf-8'))
