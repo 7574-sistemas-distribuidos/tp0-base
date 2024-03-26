@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -68,7 +69,7 @@ func (c *Client) StartClientLoop() {
 	defer file.Close()
 	reader := bufio.NewReader(file)
 	total_sent := 0
-
+	ack := 0
 loop:
 	// Send messages if the loopLapse threshold has not been surpassed
 	for timeout := time.After(c.config.LoopLapse); ; {
@@ -100,8 +101,8 @@ loop:
 			}
 			message := create_message(c, reader, last)
 			if message == "fin" {
-				log.Infof("closing: %v", c.config.ID)
-
+				send_message(c, c.conn, "end|")
+				log.Infof("finished reading: %v", c.config.ID)
 				break loop
 			}
 			send_message(c, c.conn, message)
@@ -115,10 +116,32 @@ loop:
 			log.Infof("closing: %v", c.config.ID)
 			break loop
 		}
+
+		amount, err := strconv.Atoi(answer[1])
+		if err != nil {
+			log.Fatalf("Failed to convert amount to int: %s", err)
+		}
+		ack += amount
+
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
 	log.Infof("TOTAL SENT %v", total_sent)
+	//send "end"
+	if ack < total_sent {
+		sv_answer := read_message(c, c.conn)
+		answer := strings.Split(sv_answer, " ")
+		if answer[0] == "err" {
+			log.Infof("closing: %v", c.config.ID)
+		}
+		//answer 1 to int
+		amount, _ := strconv.Atoi(answer[1])
+		ack += amount
+	}
+	// print ack and total sent
+	fmt.Println("ACK: ", ack, " TOTAL SENT: ", total_sent)
+	// Close the connection
+
 	c.conn.Close()
 
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
@@ -128,7 +151,10 @@ func read_message(c *Client, conn net.Conn) string {
 	bytes_read := 0
 	reader := bufio.NewReader(conn)
 	recv, err := reader.ReadString('\n')
-	verify_recv_error(c, err)
+	recv = recv[:len(recv)-1]
+	if verify_recv_error(c, err) != nil {
+		return err.Error()
+	}
 
 	bytes_read += len(recv)
 	min_header_len := 2

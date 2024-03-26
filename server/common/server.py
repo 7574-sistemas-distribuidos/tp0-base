@@ -13,7 +13,7 @@ class Server:
         self.running = True
         self.total_recv = 0
         
-    def handle_sigterm(self):
+    def handle_sigterm(self, signum, frame):
         logging.info("HANDLING SIGTERM")
         self.running = False
         for client in self.active_clients.values():
@@ -45,34 +45,40 @@ class Server:
         client socket will also be closed
         """
         try:
-            chunk = self.full_read(client_sock)
-            print("CHUNK: ",chunk)
-
-            if chunk:
-                #if self.get_header(chunk[-1])[1] != 1:
-                #    new_chunk = self.full_read(client_sock)
-                #    if new_chunk:
-                #        chunk += new_chunk
-                addr = client_sock.getpeername()
-                bets_received = []
+            batch = 8
+            bets = []
+            message,last = self.full_read(client_sock)
+            message = message.rstrip()
+            bet = self.parse_bet(message)
+            if bet:
+                bets.append(bet)
+            else:
+                print("BET INVALIDA")
             
-                for i in chunk:
-                    #logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {i}')
-                    i = i.rstrip()
-                    bet = self.parse_bet(i)
+            i = 0
+            while message:
+                message,last = self.full_read(client_sock)
+                if message == "end":
+                    break
+                if message:
+                    message = message.rstrip()
+                    bet = self.parse_bet(message)
                     if bet:
-                        bets_received.append(bet)
-                        self.total_recv += 1
-                        print("total bets", self.total_recv)
+                        bets.append(bet)
                     else:
                         print("BET INVALIDA")
+                    i += 1
+                
+                if i == batch-1:
+                    break
 
-                self.full_write(client_sock,f"ack {len(bets_received)}")
-                store_bets(bets_received)                    
+            for bet in bets:
                 logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
-            else:
+            store_bets(bets)               
+            self.full_write(client_sock,f"ack {len(bets)}")
 
-                client_sock.close()
+            self.total_recv += len(bets)
+            print("TOTAL ",self.total_recv)
 
 
         except OSError as e:
@@ -80,7 +86,6 @@ class Server:
         finally:            
             #addr = client_sock.getpeername()
             #self.active_clients.pop(addr[0])
-            
             client_sock.close()
 
 
@@ -120,52 +125,30 @@ class Server:
         return total_sent      
 
     def full_read(self,sock):
-        min_header_len = 4 #PONER COMO CONSTANTE (len en bytes)
         message = ""
-        
-        read = sock.recv(1024)
-        print(read)
-        if len(read) <= 0:
-            logging.error(f"action: read in socket | result: fail | error: {read}")
-            return None
-        
-        if read:
-            message += read.decode('utf-8')
+        msg = sock.recv(1)
+        if msg == b'':
+            return None, None
+        while msg != b"|":
+            message += msg.decode('utf-8')
+            msg = sock.recv(1)
 
-            #if first bet read is the last, return
-            msg_len, last_msg = self.get_header(message)
-            if msg_len == None:
-                return None
-            if last_msg == 1:
-                return message, last_msg
-            
-            #else, read what arrived
-            bets = message.split('$')
-            last = bets.pop() #remove last element, which is empty
-            #if last bet read is not the last, keep reading
-            bet, flag_last = self.get_header(bets[len(bets)-1])
-            while flag_last == 0:
-                new = sock.recv(1024)
-                new_message += new.decode('utf-8')
-                if len(new) == 0:
-                    logging.error("action: read in socket | result: fail | error: {e}")
-                    return None 
-                new_bets = new_message.split("$")
-                bets += new_bets
-                bet, flag_last = self.get_header(new_bets[len(new_bets)-1])
+        if message == "end":
+            return "end", 1
 
-        return bets
+        len, last = self.get_header(message)
+        
+        message += "|"
+        
+        payload = sock.recv(int(len)-1)
+        if msg == b'':
+            return None, None
+        message += payload.decode('utf-8')
+        
+        return message,last
 
     def get_header(self, msg):
-        if msg == '':
-            return None,None
-        header = ""
-        for i in range(0,len(msg)-1):
-            if msg[i] == "|":
-                break
-            header += msg[i]
-
-        header_parts = header.split(" ")
+        header_parts = msg.split(" ")
         msg_len = header_parts[1]
         last_msg = header_parts[0]
         return msg_len, last_msg
