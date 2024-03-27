@@ -47,46 +47,21 @@ class Server:
         client socket will also be closed
         """
         try:
-            batch = 8
-            bets = []
             message,last = self.full_read(client_sock)
-            message = message.rstrip()
-            if message == "win":
-                self.get_winners(client_sock, last)
-                return
-            if message == "end":
-                self.ended +=1
-                return
-            bet = parse_bet(message)
-            if bet:
-                bets.append(bet)
-
-            i = 0
-            while message and self.running:
-                message,last = self.full_read(client_sock)
-                if message == "win":
+            #while message and self.running: 
+            #idea: esto podria ser un match
+            match message:  
+                case "win":
                     self.get_winners(client_sock, last)
-                    break
-                if message == "end":
+                case "end":
                     self.ended +=1
-                    break
-                if message:
-                    message = message.rstrip()
+                case "bet":
                     bet = parse_bet(message)
-                    if bet:
-                        bets.append(bet)
-                    else:
-                        print("BET INVALIDA")
-                    i += 1
-                if i == batch-1:
-                    break
+                    store_bets(bet)
+                    logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
 
-            for bet in bets:
-                logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
-            store_bets(bets)     
             if message != "win": 
                 self.full_write(client_sock,f"ack {len(bets)}")
-
 
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
@@ -145,7 +120,7 @@ class Server:
         self.running = False  # Stop the server loop
 
 
-    def full_read(self,sock): 
+    def full_read(self,sock):
         #saque partes y las puse en abstract_client
         #esto deberia estar en analisis de mensaje
         if message == "win":
@@ -162,14 +137,6 @@ class Server:
             return "end", last
         
         return message,last
-
-
-        
     
 
-def get_header(msg):
-    header_parts = msg.split(" ")
-    msg_len = header_parts[1]
-    last_msg = header_parts[0]
-    return msg_len, last_msg
             
