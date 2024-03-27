@@ -2,10 +2,25 @@ import socket
 import logging
 import signal
 import sys
+import threading
 from common.utils import *
 from common.protocol import *
 
 total_clients = 5
+
+# Define a locks
+store_bets_lock = threading.Lock()
+
+def thread_safe_store_bets(bets):
+    with store_bets_lock:
+        store_bets(bets)
+
+load_bets_lock = threading.Lock()
+
+def thread_safe_load_bets():
+    with load_bets_lock:
+        return load_bets()
+
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -16,6 +31,10 @@ class Server:
 
         # { client sockets, id }
         self.client_sockets = {}
+        self.client_threads = []
+
+        # Event to sincronize
+        self.all_bets_were_sent_event = threading.Event()
 
     def run(self):
         """
@@ -31,27 +50,18 @@ class Server:
 
         # the server
         while clients_served < total_clients:
-            client_sock = self.__accept_new_connection()
-            self.__handle_client_connection(client_sock)
+            client_sock, id_agency = self.__accept_new_connection()
+            client_thread = threading.Thread(target=self.__handle_client_connection, args=(client_sock, id_agency))
+            client_thread.start()
+            self.client_threads.append(client_thread)
             clients_served += 1    
 
-        # Process results
-        results = self.__process_results()
-        logging.info(f"action: raffle | result: success")
-
-        # Send results
-        send_results_to_clients(self, results)
-
-        # Finish connections
-        for client_sock in self.client_sockets:
-            sock_address = client_sock.getpeername()  
-            sock_ip = sock_address[0]  
-            sock_port = sock_address[1]  
-            logging.info(f"action: finish_connection | result: success | remote_address: {sock_ip}:{sock_port}")
-            self.__close_socket(client_sock)
+        # Wait for all client threads to finish
+        for client_thread in self.client_threads:
+            client_thread.join()
 
 
-    def __handle_client_connection(self, client_sock):
+    def __handle_client_connection(self, client_sock, id_agency):
         """
         Read message from a specific client socket and closes the socket
 
@@ -64,20 +74,34 @@ class Server:
                 if bets == []:
                     break
 
-                store_bets(bets)
+                thread_safe_store_bets(bets)  # Usar la función envoltorio thread_safe_store_bets
 
                 logging.info(f'action: store_bets | result: success | total_bets: {len(bets)}')
                 send_confirmation(client_sock)
+
+            logging.info(f"action: all_bets_were_sent | result: success | id_agency: {id_agency}")
+
+            self.all_bets_were_sent_event.set()
+            self.all_bets_were_sent_event.wait()
+            
+            bets = thread_safe_load_bets()
+
+            filtered_bets = [bet for bet in bets if bet.agency == id_agency]
+
+            # Process results
+            results = self.__process_results(filtered_bets)
+            logging.info(f"action: raffle | result: success")
+
+            # Send results
+            send_results_to_clients(self, client_sock, results, id_agency)
 
         except OSError as e:
             logging.error(f"action: client_disconnected | result: fail | error: {e}")
             self.__close_socket(client_sock)
 
-        finally:
-            sock_address = client_sock.getpeername()  
-            sock_ip = sock_address[0]  
-            sock_port = sock_address[1]  
-            logging.info(f"action: all_bets_were_sent | result: success | remote_address: {sock_ip}:{sock_port}")
+        finally: 
+            logging.info(f"action: finish_connection | result: success | id_agency: {id_agency}")
+            self.__close_socket(client_sock)
 
 
     def __accept_new_connection(self):
@@ -102,7 +126,7 @@ class Server:
         # Add new client socket to the record
         self.client_sockets[c] = id_agency
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]} id: {id_agency}')
-        return c
+        return c, id_agency
 
     def __handle_SIGTERM(self, sig, frame):
         logging.info('SIGTERM received, shutting down gracefully')
@@ -116,25 +140,19 @@ class Server:
 
         sys.exit(0)
 
-    def __process_results(self):
-        bets = load_bets()
-       
-        #{ agency_num, {tot_winners, [winners]} }
-        results = {}
+    def __process_results(self, bets):
+        total_winners = 0
+        winner_documents = []
 
         for bet in bets: 
             if has_won(bet):
-                agency_number = bet.agency
-
-                # Verify if the agency has any entry
-                if agency_number not in results:
-                    results[agency_number] = {"total_winners": 0, "winner_documents": []}
-
                 # Add 1 to total_winners
-                results[agency_number]["total_winners"] += 1
+                total_winners += 1
 
                 # Add document winner
-                results[agency_number]["winner_documents"].append(bet.document)
+                winner_documents.append(bet.document)
+
+        results = {"total_winners": total_winners, "winners": winner_documents}
 
         return results
 

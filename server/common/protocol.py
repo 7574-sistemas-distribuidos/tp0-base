@@ -60,35 +60,26 @@ def receive_bets(socket):
 # Send 1 as a confirmation
 def send_confirmation(socket):
     socket.sendall(struct.pack('!i', 1))
+
+
+def send_results_to_clients(self, client_sock, results, agency_id):
     
-
-def send_results_to_clients(self, results):
+    total_winners = results["total_winners"]
+    winner_documents = results["winners"]
     
-    for client_sock, client_id in self.client_sockets.items():
+    # Serialize total winners
+    total_winners_bytes = struct.pack('!I', total_winners)
 
-        # Check if there are results for this client
-        if client_id in results:
-            result = results[client_id]
-            total_winners = result["total_winners"]
-            winner_documents = result["winner_documents"]
-        else:
-            # If no results for this client, set total winners to 0
-            total_winners = 0
-            winner_documents = []
-        
-        # Serialize total winners
-        total_winners_bytes = struct.pack('!I', total_winners)
+    # Serialize documents winners
+    documents_bytes = b""
+    for document in winner_documents:
+        documents_bytes += struct.pack('!I', int(document))
 
-        # Serialize documents winners
-        documents_bytes = b""
-        for document in winner_documents:
-            documents_bytes += struct.pack('!I', int(document))
-
-        data_to_send = total_winners_bytes + documents_bytes
-        
-        # Send results
-        try:
-            client_sock.sendall(data_to_send)
-            logging.info(f"Sent results to client {client_id}")
-        except Exception as e:
-            logging.error(f"Error sending results to client {client_id}: {e}")
+    data_to_send = total_winners_bytes + documents_bytes
+    
+    # Send results
+    try:
+        client_sock.sendall(data_to_send)
+        logging.info(f"Sent results to client {agency_id}")
+    except Exception as e:
+        logging.error(f"Error sending results to client {agency_id}: {e}")
