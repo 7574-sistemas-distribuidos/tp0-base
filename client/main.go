@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
+	"strconv"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +35,14 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "lapse")
 	v.BindEnv("log", "level")
+
+	v.BindEnv("nombre")
+	v.BindEnv("apellido")
+	v.BindEnv("documento")
+	v.BindEnv("nacimiento")
+	v.BindEnv("numero")
+
+	v.BindEnv("chunks", "size")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -84,6 +92,7 @@ func PrintConfig(v *viper.Viper) {
 	    v.GetDuration("loop.lapse"),
 	    v.GetDuration("loop.period"),
 	    v.GetString("log.level"),
+		v.GetString("chunk.size"),
     )
 }
 
@@ -100,13 +109,23 @@ func main() {
 	// Print program config with debugging purposes
 	PrintConfig(v)
 
+	ChunkSizeStr := v.GetString("chunks.size")
+	ChunkSize, err := strconv.Atoi(ChunkSizeStr)
+	if err != nil {
+		log.Errorf("Error converting chunk.size to an integer: %v", err)
+		return
+	}
+
+
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
 		LoopLapse:     v.GetDuration("loop.lapse"),
 		LoopPeriod:    v.GetDuration("loop.period"),
+		ChunkSize:     ChunkSize,
 	}
 
 	client := common.NewClient(clientConfig)
+
 	client.StartClientLoop()
 }
