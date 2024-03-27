@@ -1,7 +1,8 @@
 import socket
 import logging
 import signal
-from .utils import Bet, store_bets, load_bets, has_won
+from .utils import store_bets, load_bets, has_won
+from abstract_client import Abstract_client
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -111,21 +112,6 @@ class Server:
                 return c
             except:
                 return None
-
-    def full_write(self,sock, msg):
-        total_sent = 0
-        #header
-        msg_len = str(len(msg))
-        msg = msg_len + "|" + msg
-        while total_sent < len(msg):
-            sent = sock.send("{}\n".format(msg[total_sent:]).encode('utf-8')) 
-            if sent == 0:
-                print("SOCKET CERRADO: sent = 0")
-                logging.error("action: write in socket | result: fail | error: sent = 0")
-                break
-
-            total_sent += sent
-        return total_sent      
     
     def get_winners(self,sock,last): #
         self.ready[last] = sock
@@ -158,15 +144,10 @@ class Server:
     
         self.running = False  # Stop the server loop
 
-    def full_read(self,sock):
-        message = ""
-        msg = sock.recv(1)
-        if msg == b'':
-            return None, None
-        
-        while msg != b"|":
-            message += msg.decode('utf-8')
-            msg = sock.recv(1)
+
+    def full_read(self,sock): 
+        #saque partes y las puse en abstract_client
+        #esto deberia estar en analisis de mensaje
         if message == "win":
             client_id = ""
             for _ in range(1):
@@ -179,42 +160,10 @@ class Server:
             msg = sock.recv(1)
             last = msg.decode('utf-8')
             return "end", last
-        len, last = get_header(message)
-        
-        message += "|"
-        
-        payload = sock.recv(int(len)-1)
-        if msg == b'':
-            return None, None
-        message += payload.decode('utf-8')
         
         return message,last
 
-def parse_bet(msg):
-    """
-    The message received from the client is a string with the following format:
-    <header> | <agencia> | <nombre>|<apellido>|<documento>|<nacimiento>|<numero>|$
-    0/1 len
-        0         1          2          3          4           5           6
-    """        
-    categorias = msg.split("|")
-    categorias.pop() #last is always empty
-    if len(categorias) != 7:
-        return None
-    for i in range(1,len(categorias)):
-        categoria = categorias[i].split(" ")
-        categoria.pop(0)
-        categorias[i] = " ".join(categoria)
 
-    agencia = categorias[1]
-    nombre = categorias[2]
-    apellido = categorias[3]
-    documento = categorias[4]
-    nacimiento = categorias[5]
-    numero = categorias[6]
-    #print data
-    bet = Bet(agencia, nombre, apellido, documento, nacimiento, numero)
-    return bet
         
     
 

@@ -89,15 +89,14 @@ El sorteo se ejecutara con las bets recibidas, y utilizando las funciones provis
 Esta lista se utilizara posteriormente para enviar la respuesta a los clientes, obteniendo el socket de cada uno del diccionario guardado anteriormente en el server. 
 
 ## Ejercicio 8
-No llegue con el tiempo a realizar el ejercicio 8 porque no estime correctamente las dificultades que iba a tener con la realizacion del TP, pero tengo un planteamiento y varios pasos a seguir para su desarrollo. 
-
-Antes de realizar el ejercicio, realizo un analisis de los pasos a seguir.
+No llegue con el tiempo a realizar el ejercicio 8 porque no estime correctamente las dificultades y el tiempo necesario para la realizacion del TP, pero tengo un planteamiento y varios pasos a seguir para su desarrollo. 
 
 Para poder conseguir paralelismo en el servidor tendre que utilizar la libreria `multiprocessing`, para poder evitar el GIL, utilizando subprocesos en vez de threads.
 
-Por cada subproceso creado, el servidor debera tener un subproceso por cliente, llamado Abstract client, luego, el servidor solo se comunicara con sus abstracciones de un cliente, las cuales se ejecutan en paralelo.
+Por cada cliente, el servidor debera tener un subproceso llamado AbstractClient (es una abstraccion que crea y administra el subproceso, no el subproceso en si), luego, el servidor solo se comunicara con sus abstracciones de un cliente, las cuales se ejecutan en paralelo.
 
 ![alt text](images/image.png)
+
 
 Con esta imagen se pueden apreciar las dependencias: 
 + Un Abstractclient esta compuesto por un cliente y un server ya que  no puede existir sin ellos.
@@ -105,6 +104,14 @@ Con esta imagen se pueden apreciar las dependencias:
 
 Para esto cuento la desventaja de necesitar un refactor el cual separe la logica de comunicacion de la de negocio, ya que estan muy solapadas y el codigo se volvio muy intrincado.
 
-Una vez separe ambas partes, la comunicacion entre procesos estara dada a traves de pipes que provee la libreria `multiprocessing`, cada Abstractclient tendra un pipe de comunicacion con el servidor y el socket proveido por el servidor al momento de su creacion para poder comunicarse con el cliente.
+Una vez separe ambas partes, posicionando la logica de envio y recepcion de mensajes dentro de AbstractClient.  
+La comunicacion entre procesos estara dada a traves de pipes que provee la libreria `multiprocessing`, cada AbstractClient tendra un pipe de comunicacion con el servidor y el socket proveido por el servidor al momento de su creacion para poder comunicarse con el cliente.
 
-La logica de eleccion de ganador permanecera en el server, y una vez se cumplan las condiciones, este le informara a cada Abstractclient los ganadores, y este, a su vez, se los comunicara a su cliente asociado.
+La logica de eleccion de ganador permanecera en el server, y una vez se cumplan las condiciones, este le informara a cada AbstractClient los ganadores, y este, a su vez, se los comunicara a su cliente asociado.
+
+Debo tambien decidir el protocolo de comunicacion entre el server y el AbstractClient:
++ Que el server responda de a un mensaje y sea AbstractClient quien lleve la cuenta de los batches
++ Que el server lleve la cuenta de los batches y el AbstractClient solo le envie los mensajes recibidos
+
+El primero parece ser mas beneficioso para el server, ya que solo tendra que procesar los mensajes sin preocuparse por la respuesta al cliente.
+
