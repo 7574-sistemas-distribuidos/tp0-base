@@ -77,13 +77,34 @@ Despues de cada batch, se reinicia la conexion con el cliente, de forma tal que 
 ## Ejercicio 7
 Durante la implementacion de este ejercicio, surgio el problema: una vez que un cliente termina de enviar sus apuestas y envia el nuevo mensaje `win`, para consultar sus ganadores correspondientes, debia esperar a que terminen el resto de clientes de enviar sus apuestas, lo que provocaba que se lea un string vacio y no se espere a que el server le envie los ganadores. Lo solucione haciendo que una vez que el cliente termine, se quede leyendo por el socket hasta poder leer el mensaje de respuesta del cliente (no es la mejor solucion pero me encontraba con muy poco tiempo y tenia que hacerlo funcionar).
 
-### Sorteo
-El sorteo se ejecutara con las bets recibidas, y utilizando las funciones provistas por la catedra. Se guardan las 
-
-### Modificaciones en el cliente
-Una vez que termine de enviar todas las apuestas, y recibe el ack del server, marca como terminada la lectura y rompe el loop de envio y crea la nueva conexion por la cual enviara el mensaje de pedido de ganadores y recibira la respuesta.
-
 ### Modificaciones en el server
 Ahora el server debe llevar la cuenta de la cantidad de clientes que terminaron de enviar apuestas, para que una vez hayan terminado todos, realizar el sorteo.
 Tambien, al recibir el mensaje `win`, el servidor guarda los socket correspondientes a pedidos de ganadores en un diccionario propio, usando el numero de cliente como llave, y luego, se usara una vez terminado el sorteo para comunicarle el resultado a cada cliente.
 
+### Modificaciones en el cliente
+Una vez que termine de enviar todas las apuestas, y recibe el ack del server, marca como terminada la lectura y rompe el loop de envio y crea la nueva conexion por la cual enviara el mensaje de pedido de ganadores y recibira la respuesta.
+
+### Sorteo
+El sorteo se ejecutara con las bets recibidas, y utilizando las funciones provistas por la catedra. Se cuenta la cantidad de ganadores y se guarda en un diccionario, utilizando como llave el numero de agencia, una lista de DNIs de ganadores.  
+Esta lista se utilizara posteriormente para enviar la respuesta a los clientes, obteniendo el socket de cada uno del diccionario guardado anteriormente en el server. 
+
+## Ejercicio 8
+No llegue con el tiempo a realizar el ejercicio 8 porque no estime correctamente las dificultades que iba a tener con la realizacion del TP, pero tengo un planteamiento y varios pasos a seguir para su desarrollo. 
+
+Antes de realizar el ejercicio, realizo un analisis de los pasos a seguir.
+
+Para poder conseguir paralelismo en el servidor tendre que utilizar la libreria `multiprocessing`, para poder evitar el GIL, utilizando subprocesos en vez de threads.
+
+Por cada subproceso creado, el servidor debera tener un subproceso por cliente, llamado Abstract client, luego, el servidor solo se comunicara con sus abstracciones de un cliente, las cuales se ejecutan en paralelo.
+
+![alt text](images/image.png)
+
+Con esta imagen se pueden apreciar las dependencias: 
++ Un Abstractclient esta compuesto por un cliente y un server ya que  no puede existir sin ellos.
++ Un server tiene N Abstractclients, dependiendo de las conexiones con clientes que necesite.
+
+Para esto cuento la desventaja de necesitar un refactor el cual separe la logica de comunicacion de la de negocio, ya que estan muy solapadas y el codigo se volvio muy intrincado.
+
+Una vez separe ambas partes, la comunicacion entre procesos estara dada a traves de pipes que provee la libreria `multiprocessing`, cada Abstractclient tendra un pipe de comunicacion con el servidor y el socket proveido por el servidor al momento de su creacion para poder comunicarse con el cliente.
+
+La logica de eleccion de ganador permanecera en el server, y una vez se cumplan las condiciones, este le informara a cada Abstractclient los ganadores, y este, a su vez, se los comunicara a su cliente asociado.
