@@ -54,25 +54,14 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) CloseClient(writer *bufio.Writer, scanner *bufio.Scanner) {
-	// Indicate to the server that there are no more bets
-	zeroBets := SerializeNoMoreBets()
-
-	_, err := writer.Write(zeroBets)
-	if err != nil {
-		log.Errorf(
-			"action: send_message | result: fail | client_id: %v | error: %v", 
-			c.config.ID, 
-			err,
-		)
-	}
+func (c *Client) CloseClient(writer *bufio.Writer, reader *bufio.Reader) {
 
 	// Release resources
-	err = writer.Flush()
+	err := writer.Flush()
 	if err != nil {
 		log.Errorf("Error flushing the bufio.Writer: %v", err)
 	}
-	scanner = nil
+	reader = nil
 
 	c.conn.Close()
 }
@@ -114,13 +103,13 @@ func (c *Client) StartClientLoop() {
 	defer file.Close()
 
 	// New reader
-	reader := csv.NewReader(file)
+	csv_reader := csv.NewReader(file)
     
 	// Create write and read buffer from the socket
 	writer := bufio.NewWriter(c.conn)
-	scanner := bufio.NewScanner(c.conn)
+	reader := bufio.NewReader(c.conn)
 
-	defer c.CloseClient(writer, scanner)
+	defer c.CloseClient(writer, reader)
 
 	bets_sent := 0
 
@@ -132,12 +121,19 @@ func (c *Client) StartClientLoop() {
 		return 
 	}
 
+	// First msg: send the id of the client
+	idBytes := EncodeInt(id)
 
-loop:
+	err = SendMessage(id, writer, idBytes)
+	if err != nil {
+		fmt.Println("%v", err)
+		return
+	}
+
 	// Send messages if the loopLapse threshold has not been surpassed
-	for ; ; {
+	for {
 
-		bets, err := ProcessCSV(reader, c.config.ChunkSize, id)
+		bets, err := ProcessCSV(csv_reader, c.config.ChunkSize, id)
 		if err != nil {
 			fmt.Println("%v", err)
 			return
@@ -155,7 +151,7 @@ loop:
 			return
 		}
 
-		msg_received, err := ReceiveMessage(id, scanner)
+		msg_received, err := ReceiveConfirmation(id, reader)
 		if err != nil {
 			fmt.Println("%v", err)
 			return
@@ -184,12 +180,26 @@ loop:
 
 		// EOF was reached
 		if chunkSize != c.config.ChunkSize {
-			break loop
+			err = SendNoMoreBets(id, writer)
+			if err != nil {
+				fmt.Println("%v", err)
+				return
+			}
+			break
 		}
 
 		// Wait a time between sending one message and the next one
 		time.Sleep(c.config.LoopPeriod)
 	}
+
+
+	result, err := RequestResult(id, reader)
+	if err != nil {
+		fmt.Println("%v", err)
+		return
+	}
+
+	log.Infof("action: winners_query | result: success | client_id: %v | tot_winners: %v", c.config.ID, result.TotalWinners)
 
 	log.Infof("action: finished | result: success | client_id: %v | bets_sent: %v", c.config.ID, bets_sent)
 }

@@ -1,4 +1,5 @@
 import struct
+import logging
 from common.utils import Bet
 
 """
@@ -56,6 +57,38 @@ def receive_bets(socket):
 
     return bets    
 
-def send_ack(socket):
-    # Send ACK
-    socket.send("ACK\n".encode('utf-8'))
+# Send 1 as a confirmation
+def send_confirmation(socket):
+    socket.sendall(struct.pack('!i', 1))
+    
+
+def send_results_to_clients(self, results):
+    
+    for client_sock, client_id in self.client_sockets.items():
+
+        # Check if there are results for this client
+        if client_id in results:
+            result = results[client_id]
+            total_winners = result["total_winners"]
+            winner_documents = result["winner_documents"]
+        else:
+            # If no results for this client, set total winners to 0
+            total_winners = 0
+            winner_documents = []
+        
+        # Serialize total winners
+        total_winners_bytes = struct.pack('!I', total_winners)
+
+        # Serialize documents winners
+        documents_bytes = b""
+        for document in winner_documents:
+            documents_bytes += struct.pack('!I', int(document))
+
+        data_to_send = total_winners_bytes + documents_bytes
+        
+        # Send results
+        try:
+            client_sock.sendall(data_to_send)
+            logging.info(f"Sent results to client {client_id}")
+        except Exception as e:
+            logging.error(f"Error sending results to client {client_id}: {e}")

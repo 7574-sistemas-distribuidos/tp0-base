@@ -5,6 +5,8 @@ import sys
 from common.utils import *
 from common.protocol import *
 
+total_clients = 5
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -12,8 +14,8 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
 
-        # Init client sockets list
-        self.client_sockets = []
+        # { client sockets, id }
+        self.client_sockets = {}
 
     def run(self):
         """
@@ -25,11 +27,29 @@ class Server:
         """
 
         signal.signal(signal.SIGTERM, self.__handle_SIGTERM)
-       
+        clients_served = 0
+
         # the server
-        while True:
+        while clients_served < total_clients:
             client_sock = self.__accept_new_connection()
             self.__handle_client_connection(client_sock)
+            clients_served += 1    
+
+        # Process results
+        results = self.__process_results()
+        logging.info(f"action: raffle | result: success")
+
+        # Send results
+        send_results_to_clients(self, results)
+
+        # Finish connections
+        for client_sock in self.client_sockets:
+            sock_address = client_sock.getpeername()  
+            sock_ip = sock_address[0]  
+            sock_port = sock_address[1]  
+            logging.info(f"action: finish_connection | result: success | remote_address: {sock_ip}:{sock_port}")
+            self.__close_socket(client_sock)
+
 
     def __handle_client_connection(self, client_sock):
         """
@@ -47,7 +67,7 @@ class Server:
                 store_bets(bets)
 
                 logging.info(f'action: store_bets | result: success | total_bets: {len(bets)}')
-                send_ack(client_sock)
+                send_confirmation(client_sock)
 
         except OSError as e:
             logging.error(f"action: client_disconnected | result: fail | error: {e}")
@@ -57,9 +77,8 @@ class Server:
             sock_address = client_sock.getpeername()  
             sock_ip = sock_address[0]  
             sock_port = sock_address[1]  
-            logging.info(f"action: finish_connection | result: success | remote_address: {sock_ip}:{sock_port}")
+            logging.info(f"action: all_bets_were_sent | result: success | remote_address: {sock_ip}:{sock_port}")
 
-            self.__close_socket(client_sock)
 
     def __accept_new_connection(self):
         """
@@ -72,9 +91,17 @@ class Server:
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
-        # Add new client socket to the list
-        self.client_sockets.append(c)
-        logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+        
+        # Recieve the id client
+        idRaw = c.recv(4)
+        if not idRaw:
+            raise OSError("Client disconnected")
+
+        id_agency = struct.unpack("!I", idRaw)[0]
+
+        # Add new client socket to the record
+        self.client_sockets[c] = id_agency
+        logging.info(f'action: accept_connections | result: success | ip: {addr[0]} id: {id_agency}')
         return c
 
     def __handle_SIGTERM(self, sig, frame):
@@ -83,13 +110,33 @@ class Server:
         self._server_socket.close()
 
         for client_sock in self.client_sockets:
-            client_sock.close()
+            client_sock[0].close()
 
         self.client_sockets.clear()
 
         sys.exit(0)
 
+    def __process_results(self):
+        bets = load_bets()
+       
+        #{ agency_num, {tot_winners, [winners]} }
+        results = {}
+
+        for bet in bets: 
+            if has_won(bet):
+                agency_number = bet.agency
+
+                # Verify if the agency has any entry
+                if agency_number not in results:
+                    results[agency_number] = {"total_winners": 0, "winner_documents": []}
+
+                # Add 1 to total_winners
+                results[agency_number]["total_winners"] += 1
+
+                # Add document winner
+                results[agency_number]["winner_documents"].append(bet.document)
+
+        return results
+
     def __close_socket(self, client_sock):
         client_sock.close()
-        # Remove socket from the list
-        self.client_sockets.remove(client_sock)

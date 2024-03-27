@@ -20,6 +20,12 @@ type Bet struct {
 	Number    int       
 }
 
+func EncodeInt(id int) []byte {
+	idBytes := make([]byte, 4) 
+	binary.BigEndian.PutUint32(idBytes, uint32(id))
+	return idBytes
+}
+
 //  |- Id -|------ Name ------|------ LastName ------|- Document -|--  Birthdate --|- Number -|
 //  |- 4b -|------  24b ------|------   24b    ------|-    4b    -|--    10b     --|-   4b   -|
 //  Total size = 4 + 24 + 24 + 4 + 10 + 4 = 70b
@@ -27,8 +33,7 @@ func SerializeBet(bet Bet) []byte {
 	buf := make([]byte, 0)
 
 	// Id
-	idBytes := make([]byte, 4) 
-	binary.BigEndian.PutUint32(idBytes, uint32(bet.Id))
+	idBytes := EncodeInt(bet.Id) 
 
 	// Name
 	nameBytes := make([]byte, 24) 
@@ -126,11 +131,4 @@ func ProcessCSV(reader *csv.Reader, chunkSize int, id int) ([]Bet, error) {
 	}
 
 	return bets, nil
-}
-
-func SerializeNoMoreBets() []byte {
-	buf := make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, 0)
-
-	return buf
 }
