@@ -2,16 +2,18 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
+
+var log = logging.MustGetLogger("log")
 
 // InitConfig Function that uses viper library to parse configuration parameters.
 // Viper is configured to read variables from both environment variables and the
@@ -33,7 +35,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
 	v.BindEnv("loop", "period")
-	v.BindEnv("loop", "lapse")
+	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
 
 	// Try to read configuration from config file. If config file
@@ -46,9 +48,6 @@ func InitConfig() (*viper.Viper, error) {
 	}
 
 	// Parse time.Duration variables and return an error if those variables cannot be parsed
-	if _, err := time.ParseDuration(v.GetString("loop.lapse")); err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_LAPSE env var as time.Duration.")
-	}
 
 	if _, err := time.ParseDuration(v.GetString("loop.period")); err != nil {
 		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_PERIOD env var as time.Duration.")
@@ -57,44 +56,48 @@ func InitConfig() (*viper.Viper, error) {
 	return v, nil
 }
 
-// InitLogger Receives the log level to be set in logrus as a string. This method
+// InitLogger Receives the log level to be set in go-logging as a string. This method
 // parses the string and set the level to the logger. If the level string is not
 // valid an error is returned
 func InitLogger(logLevel string) error {
-	level, err := logrus.ParseLevel(logLevel)
+	baseBackend := logging.NewLogBackend(os.Stdout, "", 0)
+	format := logging.MustStringFormatter(
+		`%{time:2006-01-02 15:04:05} %{level:.5s}     %{message}`,
+	)
+	backendFormatter := logging.NewBackendFormatter(baseBackend, format)
+
+	backendLeveled := logging.AddModuleLevel(backendFormatter)
+	logLevelCode, err := logging.LogLevel(logLevel)
 	if err != nil {
 		return err
 	}
+	backendLeveled.SetLevel(logLevelCode, "")
 
-    customFormatter := &logrus.TextFormatter{
-      TimestampFormat: "2006-01-02 15:04:05",
-      FullTimestamp: false,
-    }
-    logrus.SetFormatter(customFormatter)
-	logrus.SetLevel(level)
+	// Set the backends to be used.
+	logging.SetBackend(backendLeveled)
 	return nil
 }
 
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
-	logrus.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_lapse: %v | loop_period: %v | log_level: %s",
-	    v.GetString("id"),
-	    v.GetString("server.address"),
-	    v.GetDuration("loop.lapse"),
-	    v.GetDuration("loop.period"),
-	    v.GetString("log.level"),
-    )
+	log.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_amount: %v | loop_period: %v | log_level: %s",
+		v.GetString("id"),
+		v.GetString("server.address"),
+		v.GetInt("loop.amount"),
+		v.GetDuration("loop.period"),
+		v.GetString("log.level"),
+	)
 }
 
 func main() {
 	v, err := InitConfig()
 	if err != nil {
-		log.Fatalf("%s", err)
+		log.Criticalf("%s", err)
 	}
 
 	if err := InitLogger(v.GetString("log.level")); err != nil {
-		log.Fatalf("%s", err)
+		log.Criticalf("%s", err)
 	}
 
 	// Print program config with debugging purposes
@@ -103,7 +106,7 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		LoopLapse:     v.GetDuration("loop.lapse"),
+		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
