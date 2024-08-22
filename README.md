@@ -67,13 +67,11 @@ client1 exited with code 0
 En esta primera parte del trabajo práctico se plantean una serie de ejercicios que sirven para introducir las herramientas básicas de Docker que se utilizarán a lo largo de la materia. El entendimiento de las mismas será crucial para el desarrollo de los próximos TPs.
 
 ### Ejercicio N°1:
-Modificar la definición del DockerCompose para agregar un nuevo cliente 'client2' al proyecto.
+Además, definir un script de bash `generar-compose.sh` que permita crear una definición de DockerCompose con una cantidad configurable de clientes.  El nombre de los containers deberá seguir el formato propuesto: client1, client2, client3, etc. 
 
-Además, definir un script de bash `generar-compose.sh`que permita crear una definición de DockerCompose con una cantidad configurable de clientes.  El nombre de los containers deberá seguir el formato propuesto: client1, client2, client3, etc. 
+El script deberá ubicarse en la raíz del proyecto y recibirá por parámetro el nombre del archivo de salida y la cantidad de clientes esperados:
 
-El script deberá ubicarse en la raíz del proyecto y recibirá por parámetro la el nombre del archivo de salida y la cantidad de clientes esperados:
-
-`generar-compose.sh docker-compose-dev.yaml 5`
+`./generar-compose.sh docker-compose-dev.yaml 5`
 
 Considerar que en el contenido del script pueden invocar un subscript de Go o Python:
 
@@ -138,11 +136,9 @@ Se deberá implementar un módulo de comunicación entre el cliente y el servido
 Modificar los clientes para que envíen varias apuestas a la vez (modalidad conocida como procesamiento por _chunks_ o _batchs_). La información de cada agencia será simulada por la ingesta de su archivo numerado correspondiente, provisto por la cátedra dentro de `.data/datasets.zip`.
 Los _batchs_ permiten que el cliente registre varias apuestas en una misma consulta, acortando tiempos de transmisión y procesamiento.
 
-Justo al recibir un batch de apuestas imprimir por log en el servidor:
+En el servidor, si todas las apuestas del *batch* fueron procesadas correctamente, imprimir por log: `action: apuesta_recibida | result: success | cantidad: ${CANTIDAD_DE_APUESTAS}`. En caso de detectar un error con alguna de las apuestas, debe responder con un código de error a elección e imprimir: `action: apuesta_recibida | result: fail | cantidad: ${CANTIDAD_DE_APUESTAS}`.
 
-`action: apuesta_recibida | result: success | cantidad: ${CANTIDAD_DE_APUESTAS}`
-
-La cantidad de apuestas dentro de cada _batch_ debe ser configurable, leyendo la cantidad de apuestas por mensaje desde el config.yaml. Puede elegirse un valor por defecto de modo tal que los paquetes no excedan los 8kB. 
+La cantidad máxima de apuestas dentro de cada _batch_ debe ser configurable desde config.yaml. Respetar la clave `batch: maxAmount`, pero modificar el valor por defecto de modo tal que los paquetes no excedan los 8kB. 
 
 El servidor, por otro lado, deberá responder con éxito solamente si todas las apuestas del _batch_ fueron procesadas correctamente.
 
@@ -175,7 +171,9 @@ Se espera que los alumnos realicen un _fork_ del presente repositorio para el de
 La Parte 2 requiere una sección donde se explique el protocolo de comunicación implementado.
 La Parte 3 requiere una sección que expliquen los mecanismos de sincronización utilizados.
 
-Cada ejercicio deberá resolverse en una rama independiente con nombres siguiendo el formato `ej${Nro de ejercicio}`, por ejemplo: ej1, ej2, ej3, ej4. Pueden agregar commits en el órden y momento que deseen, así como crear una rama a partir de la otra, lo importante es que en el momento de la entrega los ocho ejercicios se separen en ramas con nombres apropiados.
+Cada ejercicio deberá resolverse en una rama independiente con nombres siguiendo el formato `ej${Nro de ejercicio}`. Se permite agregar commits en cualquier órden, así como crear una rama a partir de otra, pero al momento de la entrega deben existir 8 ramas llamadas: ej1, ej2, ..., ej7, ej8.
+
+(hint: verificar listado de ramas y últimos commits con `git ls-remote`)
 
 Puden obtener un listado del último commit de cada rama ejecutando `git ls-remote`.
 
