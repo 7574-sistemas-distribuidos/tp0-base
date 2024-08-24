@@ -6,7 +6,9 @@ def generate_clients(filename, num_clients):
             f.write(f"  client{i}:\n")
             f.write(f"    image: client:latest\n")
             f.write(f"    depends_on:\n")
-            f.write(f"      - tp_0\n")
+            f.write(f"      - server\n")
+            f.write(f"    volumes:\n")
+            f.write(f"      - ./client/config.yaml:/config.yaml\n")
             f.write(f"    environment:\n")
             f.write(f"      - CLIENT_ID={i}\n")
 

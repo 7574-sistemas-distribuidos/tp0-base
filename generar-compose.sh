@@ -8,10 +8,12 @@ NUM_CLIENTS=$2
 
 echo "version: '3'" > $OUTPUT_FILE
 echo "services:" >> $OUTPUT_FILE
-echo "  tp_0:" >> $OUTPUT_FILE
-echo "    image: tp_0:latest" >> $OUTPUT_FILE
+echo "  server:" >> $OUTPUT_FILE
+echo "    image: server:latest" >> $OUTPUT_FILE
 echo "    ports:" >> $OUTPUT_FILE
 echo "      - \"8081:80\"" >> $OUTPUT_FILE
+echo "    volumes:" >> $OUTPUT_FILE
+echo "      - ./server/config.ini:/config.ini" >> $OUTPUT_FILE
 echo "" >> $OUTPUT_FILE
 
 python3 helpers/create_clients.py $OUTPUT_FILE $NUM_CLIENTS
