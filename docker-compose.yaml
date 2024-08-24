@@ -1,0 +1,25 @@
+version: '3'
+services:
+  tp_0:
+    image: tp_0:latest
+    ports:
+      - "8081:80"
+
+  client1:
+    image: client:latest
+    depends_on:
+      - tp_0
+    environment:
+      - CLIENT_ID=1
+  client2:
+    image: client:latest
+    depends_on:
+      - tp_0
+    environment:
+      - CLIENT_ID=2
+  client3:
+    image: client:latest
+    depends_on:
+      - tp_0
+    environment:
+      - CLIENT_ID=3
