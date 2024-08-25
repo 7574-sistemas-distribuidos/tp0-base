@@ -11,7 +11,7 @@ CODE_FAILURE = 1
 CONFIG_PARAM_CONTAINER_NAME = "container_name"
 CONFIG_PARAM_ENVIRONMENT = "environment"
 CLIENT_SERVICE_PREFIX = "client"
-CLIENT_SERVICE_ENV_ID_NAME = "CLIENT_ID"
+CLIENT_SERVICE_ENV_ID_NAME = "CLI_ID"
 FILE_BEGIN_POSITION = 0
 
 
@@ -21,6 +21,7 @@ def get_service_client_config():
         "image": "client:latest",
         "entrypoint": "/client",
         CONFIG_PARAM_ENVIRONMENT: ["CLI_LOG_LEVEL=DEBUG"],
+        "volumes": ["./client/config.yaml:/config.yaml"],
         "networks": ["testing_net"],
         "depends_on": ["server"],
     }
@@ -72,9 +73,9 @@ def main():
                 for i in range(len(client_containers), n_clients):
                     new_client_service_name = f"{CLIENT_SERVICE_PREFIX}{i + 1}"
                     new_client_service_config = get_service_client_config()
-                    new_client_service_config[CONFIG_PARAM_CONTAINER_NAME] = (
-                        new_client_service_name
-                    )
+                    new_client_service_config[
+                        CONFIG_PARAM_CONTAINER_NAME
+                    ] = new_client_service_name
                     new_client_service_config[CONFIG_PARAM_ENVIRONMENT].append(
                         f"{CLIENT_SERVICE_ENV_ID_NAME}={i + 1}"
                     )
