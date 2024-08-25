@@ -15,6 +15,8 @@ Before running any scripts it is necessary to execute `poetry install` first to 
 ## Run scritps
 
 ### Scale Clients
-poetry run python scale_clients.py <file_name> <n_clients>
-> Example of usage: poetry run python scale_clients.py docker-compose-dev.yaml 5
-> Example of usage: poetry run python scale_clients.py docker-compose-dev.yaml 2
+`poetry run python scale_clients.py <file_name> <n_clients>`
+
+Example of usage
+- poetry run python scale_clients.py docker-compose-dev.yaml 5
+- poetry run python scale_clients.py docker-compose-dev.yaml 2
