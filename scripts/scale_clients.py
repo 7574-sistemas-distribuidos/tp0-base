@@ -72,9 +72,9 @@ def main():
                 for i in range(len(client_containers), n_clients):
                     new_client_service_name = f"{CLIENT_SERVICE_PREFIX}{i + 1}"
                     new_client_service_config = get_service_client_config()
-                    new_client_service_config[CONFIG_PARAM_CONTAINER_NAME] = (
-                        new_client_service_name
-                    )
+                    new_client_service_config[
+                        CONFIG_PARAM_CONTAINER_NAME
+                    ] = new_client_service_name
                     new_client_service_config[CONFIG_PARAM_ENVIRONMENT].append(
                         f"{CLIENT_SERVICE_ENV_ID_NAME}={i + 1}"
                     )
