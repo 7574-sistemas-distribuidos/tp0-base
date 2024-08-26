@@ -1,5 +1,10 @@
 name: tp0
 services:
+  healthcheck:
+    container_name: healthcheck
+    image: alpine:edge
+    networks:
+    - testing_net
   server:
     container_name: server
     image: server:latest
