@@ -6,7 +6,6 @@ from common.signal_controller import SignalController
 class Server:
     def __init__(self, port, listen_backlog):
         self._set_graceful_shutdown()
-        # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
@@ -52,8 +51,6 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
         while self._is_running:
             client_socket = self.__accept_new_connection()
             if client_socket is None: continue
@@ -89,7 +86,6 @@ class Server:
         Then connection created is printed and returned
         """
 
-        # Connection arrived
         try:
             logging.info('action: accept_connections | result: in_progress')
             client_socket, addr = self._server_socket.accept()
