@@ -1,3 +1,6 @@
 server/config.ini
 client/config.yaml
 docker-compose-dev.yaml
+scripts
+generar-compose.sh
+validar-echo-server.sh
