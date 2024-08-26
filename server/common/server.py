@@ -52,12 +52,12 @@ class Server:
         """
 
         while self._is_running:
-            client_socket = self.__accept_new_connection()
+            client_socket = self._accept_new_connection()
             if client_socket is None:
                 continue
 
             self._client_socket = client_socket
-            self.__handle_client_connection()
+            self._handle_client_connection()
 
     def _handle_client_connection(self):
         """
