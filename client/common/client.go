@@ -1,9 +1,7 @@
 package common
 
 import (
-	"bufio"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,12 +18,17 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopAmount    int
 	LoopPeriod    time.Duration
+	Name          string
+	LastName      string
+	IdNumber      string
+	Birthdate     string
+	BetNumber     string
 }
 
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	conn   net.Conn
+	socket *SocketTCP
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -41,15 +44,13 @@ func NewClient(config ClientConfig) *Client {
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
 func (c *Client) createClientSocket() error {
-	conn, err := net.Dial("tcp", c.config.ServerAddress)
+	socket := NewSocketTCP(c.config.ServerAddress)
+	err := socket.Connect()
+
 	if err != nil {
-		log.Criticalf(
-			"action: connect | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+		log.Criticalf("action: connect | result: fail | client_id: %v | error: %v", c.config.ID, err)
 	}
-	c.conn = conn
+	c.socket = socket
 	return nil
 }
 
@@ -81,18 +82,18 @@ func (c *Client) setGracefulShutdown() chan os.Signal {
 }
 
 func (c *Client) processClient(msgID int, join chan struct{}) {
-	// Create the connection the server in every loop iteration. Send an
+	// Create the connection the server in every loop iteration.
 	c.createClientSocket()
-
-	// TODO: Modify the send to avoid short-write
-	fmt.Fprintf(
-		c.conn,
-		"[CLIENT %v] Message N°%v\n",
-		c.config.ID,
-		msgID,
-	)
-	msg, err := bufio.NewReader(c.conn).ReadString('\n')
-	c.releaseConn()
+	protocol := NewProtocol(c.config.ID)
+	betMessage := BetMessage{
+		Name:      c.config.Name,
+		LastName:  c.config.LastName,
+		IdNumber:  c.config.IdNumber,
+		Birthdate: c.config.Birthdate,
+		BetNumber: c.config.BetNumber,
+	}
+	msg, err := protocol.RegisterBet(*c.socket, fmt.Sprintf("%v", msgID), betMessage)
+	c.releaseSocket()
 
 	if err != nil {
 		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
@@ -104,7 +105,7 @@ func (c *Client) processClient(msgID int, join chan struct{}) {
 
 	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 		c.config.ID,
-		msg,
+		*msg,
 	)
 
 	// Wait a time between sending one message and the next one
@@ -114,13 +115,10 @@ func (c *Client) processClient(msgID int, join chan struct{}) {
 
 func (c *Client) releaseResources() {
 	log.Infof("action: releasing_resources | result: in_progress | client_id: %v", c.config.ID)
-	c.releaseConn()
+	c.releaseSocket()
 	log.Infof("action: releasing_resources | result: success | client_id: %v", c.config.ID)
 }
 
-func (c *Client) releaseConn() {
-	if c.conn != nil {
-		c.conn.Close()
-		c.conn = nil
-	}
+func (c *Client) releaseSocket() {
+	c.socket.DeleteSocketTCP()
 }
