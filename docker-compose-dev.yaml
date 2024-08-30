@@ -77,11 +77,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=4
-      - CLI_NAME=Serena
-      - CLI_LASTNAME=Wiliams
-      - CLI_IDNUMBER=64257931
-      - CLI_BIRTHDATE=1981-09-26
-      - CLI_BETNUMBER=2
+      - CLI_NAME=Santiago Lionel
+      - CLI_LASTNAME=Lorca
+      - CLI_IDNUMBER=30904465
+      - CLI_BIRTHDATE=1999-03-17
+      - CLI_BETNUMBER=7574
       - CLI_LOG_LEVEL=DEBUG
     volumes:
     - ./client/config.yaml:/config.yaml
