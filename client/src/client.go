@@ -110,6 +110,10 @@ func (c *Client) processClient(msgID int, join chan struct{}) {
 		c.config.ID,
 		*msg,
 	)
+	log.Infof("action: apuesta_enviada | result: success | dni: $%v | numero: $%v",
+		betContent.IdNumber,
+		betContent.BetNumber,
+	)
 
 	// Wait a time between sending one message and the next one
 	time.Sleep(c.config.LoopPeriod)
