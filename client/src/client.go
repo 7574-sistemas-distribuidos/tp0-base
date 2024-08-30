@@ -7,6 +7,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/src/communication"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/src/network"
 	"github.com/op/go-logging"
 )
 
@@ -28,7 +30,7 @@ type ClientConfig struct {
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	socket *SocketTCP
+	socket *network.SocketTCP
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -44,7 +46,7 @@ func NewClient(config ClientConfig) *Client {
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
 func (c *Client) createClientSocket() error {
-	socket := NewSocketTCP(c.config.ServerAddress)
+	socket := network.NewSocketTCP(c.config.ServerAddress)
 	err := socket.Connect()
 
 	if err != nil {
@@ -84,8 +86,8 @@ func (c *Client) setGracefulShutdown() chan os.Signal {
 func (c *Client) processClient(msgID int, join chan struct{}) {
 	// Create the connection the server in every loop iteration.
 	c.createClientSocket()
-	protocol := NewProtocol(c.config.ID)
-	betMessage := BetMessage{
+	protocol := communication.NewProtocol(c.config.ID)
+	betMessage := communication.BetMessage{
 		Name:      c.config.Name,
 		LastName:  c.config.LastName,
 		IdNumber:  c.config.IdNumber,

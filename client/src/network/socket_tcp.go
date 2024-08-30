@@ -1,8 +1,7 @@
-package common
+package network
 
 import (
 	"bufio"
-	"encoding/binary"
 	"net"
 )
 
@@ -56,14 +55,4 @@ func (s *SocketTCP) Receive(buffer []byte) error {
 		}
 	}
 	return nil
-}
-
-func htonl(value uint32) []byte {
-	sizeBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(sizeBytes, value)
-	return sizeBytes
-}
-
-func ntohl(value []byte) uint32 {
-	return binary.BigEndian.Uint32(value)
 }
