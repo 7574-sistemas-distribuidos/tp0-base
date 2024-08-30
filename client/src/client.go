@@ -45,7 +45,7 @@ func NewClient(config ClientConfig) *Client {
 // CreateClientSocket Initializes client socket. In case of
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
-func (c *Client) createClientSocket() error {
+func (c *Client) createSocket() error {
 	socket := network.NewSocketTCP(c.config.ServerAddress)
 	err := socket.Connect()
 
@@ -85,17 +85,18 @@ func (c *Client) setGracefulShutdown() chan os.Signal {
 
 func (c *Client) processClient(msgID int, join chan struct{}) {
 	// Create the connection the server in every loop iteration.
-	c.createClientSocket()
-	protocol := communication.NewProtocol(c.config.ID)
-	betMessage := communication.BetMessage{
+	c.createSocket()
+	defer c.destroySocket()
+
+	protocol := communication.NewProtocol(c.config.ID, *c.socket)
+	betContent := communication.BetContent{
 		Name:      c.config.Name,
 		LastName:  c.config.LastName,
 		IdNumber:  c.config.IdNumber,
 		Birthdate: c.config.Birthdate,
 		BetNumber: c.config.BetNumber,
 	}
-	msg, err := protocol.RegisterBet(*c.socket, fmt.Sprintf("%v", msgID), betMessage)
-	c.releaseSocket()
+	msg, err := protocol.RegisterBet(fmt.Sprintf("%v", msgID), betContent)
 
 	if err != nil {
 		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
@@ -117,10 +118,10 @@ func (c *Client) processClient(msgID int, join chan struct{}) {
 
 func (c *Client) releaseResources() {
 	log.Infof("action: releasing_resources | result: in_progress | client_id: %v", c.config.ID)
-	c.releaseSocket()
+	c.destroySocket()
 	log.Infof("action: releasing_resources | result: success | client_id: %v", c.config.ID)
 }
 
-func (c *Client) releaseSocket() {
+func (c *Client) destroySocket() {
 	c.socket.DeleteSocketTCP()
 }

@@ -4,63 +4,69 @@ import (
 	"fmt"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/src/network"
-	log "github.com/sirupsen/logrus"
 )
 
-const bytesOfContentLength = 4
-
-func readContentLength(socket network.SocketTCP) (uint32, error) {
-	bufferOfContentLength := make([]byte, bytesOfContentLength)
-	if err := socket.Receive(bufferOfContentLength); err != nil {
-		return 0, err
-	}
-	return network.Ntohl(bufferOfContentLength), nil
-}
-
-func writeContentLength(data string) string {
-	contentLength := network.Htonl(uint32(len(data)))
-	return fmt.Sprintf("%s%s", string(contentLength), data)
-}
+const bytesOfPacketLength = 4
 
 type Protocol struct {
 	clientId string
+	socket   network.SocketTCP
 }
 
-func NewProtocol(clientId string) *Protocol {
+func NewProtocol(clientId string, socket network.SocketTCP) *Protocol {
 	return &Protocol{
 		clientId: clientId,
+		socket:   socket,
 	}
 }
 
-func (p *Protocol) RegisterBet(socket network.SocketTCP, messageId string, message BetMessage) (*PacketResponse, error) {
-	if err := p.sendBetRegister(socket, messageId, message); err != nil {
-		log.Debugf("action: after_send_bet")
-		return nil, err
-	}
-	return p.receiveBetRegisterResponse(socket)
+func (p *Protocol) RegisterBet(messageId string, betContent BetContent) (*PacketResponse, error) {
+	p.sendBetRegister(messageId, betContent)
+	return p.receiveBetRegisterResponse()
 }
 
-func (p *Protocol) sendBetRegister(socket network.SocketTCP, messageId string, message BetMessage) error {
+func (p *Protocol) sendBetRegister(messageId string, betContent BetContent) error {
 	packet := Packet{
 		Command:   "REGISTER_BET",
 		ClientId:  p.clientId,
 		MessageId: messageId,
-		Data:      message.Serialize(),
+		Content:   betContent.Serialize(),
 	}
-	data := writeContentLength(packet.Serialize())
-	return socket.Send([]byte(data))
+	return p.sendMessage(packet)
 }
 
-func (p *Protocol) receiveBetRegisterResponse(socket network.SocketTCP) (*PacketResponse, error) {
-	contentLength, err := readContentLength(socket)
+func (p *Protocol) sendMessage(packet Packet) error {
+	serializedPacket := packet.Serialize()
+	messageLength := p.calculatePacketLength(serializedPacket)
+	message := fmt.Sprintf("%s%s", string(messageLength), serializedPacket)
+	return p.socket.Send([]byte(message))
+}
+
+func (p *Protocol) calculatePacketLength(packet string) []byte {
+	return network.Htonl(uint32(len(packet)))
+}
+
+func (p *Protocol) receiveBetRegisterResponse() (*PacketResponse, error) {
+	packetLength, err := p.receivePacketLength()
 	if err != nil {
 		return nil, err
 	}
+	return p.receivePacketResponse(packetLength)
+}
 
-	bufferOfDataResponse := make([]byte, contentLength)
-	if err := socket.Receive(bufferOfDataResponse); err != nil {
+func (p *Protocol) receivePacketLength() (uint32, error) {
+	packetLength := make([]byte, bytesOfPacketLength)
+	if err := p.socket.Receive(packetLength); err != nil {
+		return 0, err
+	}
+	return network.Ntohl(packetLength), nil
+}
+
+func (p *Protocol) receivePacketResponse(packetLength uint32) (*PacketResponse, error) {
+	serializedPacket := make([]byte, packetLength)
+	if err := p.socket.Receive(serializedPacket); err != nil {
 		return nil, err
 	}
-	packetResponse := DeserializePacketResponse(string(bufferOfDataResponse))
+	packetResponse := DeserializePacketResponse(string(serializedPacket))
 	return packetResponse, nil
 }

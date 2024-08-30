@@ -12,7 +12,7 @@ type Packet struct {
 	Command   string
 	ClientId  string
 	MessageId string
-	Data      string
+	Content   string
 }
 
 func (p *Packet) Serialize() string {
@@ -20,8 +20,8 @@ func (p *Packet) Serialize() string {
 	clientId := fmt.Sprintf("CLIENT_ID%s%s%s", tagValueSeparator, p.ClientId, newLine)
 	messageId := fmt.Sprintf("MESSAGE_ID%s%s%s", tagValueSeparator, p.MessageId, newLine)
 	header := command + clientId + messageId
-	body := p.Data
-	packet := header + newLine + body
+	content := p.Content
+	packet := header + newLine + content
 	return packet
 }
 
