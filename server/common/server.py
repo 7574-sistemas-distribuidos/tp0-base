@@ -1,14 +1,15 @@
-import socket
 import logging
 from common.signal_controller import SignalController
+from common.network.socket_tcp import SocketTCP
+from common.communication.protocol import Protocol
+from common.communication.command_dispatcher import CommandDispatcher
 
 
 class Server:
     def __init__(self, port, listen_backlog):
         self._set_graceful_shutdown()
-        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server_socket.bind(("", port))
-        self._server_socket.listen(listen_backlog)
+        self._server_socket = SocketTCP("", port)
+        self._server_socket.bind_and_listen(listen_backlog)
         self._client_socket = None
         self._is_running = True
 
@@ -27,20 +28,10 @@ class Server:
         self._is_running = False
 
     def _release_server_socket(self):
-        if self._server_socket:
-            try:
-                self._server_socket.shutdown(socket.SHUT_RDWR)
-            finally:
-                self._server_socket.close()
-                self._server_socket = None
+        self._server_socket.close()
 
     def _release_client_socket(self):
-        if self._client_socket:
-            try:
-                self._client_socket.shutdown(socket.SHUT_RDWR)
-            finally:
-                self._client_socket.close()
-                self._client_socket = None
+        self._client_socket.close()
 
     def run(self):
         """
@@ -68,14 +59,10 @@ class Server:
         """
         try:
             client_socket = self._client_socket
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_socket.recv(1024).rstrip().decode("utf-8")
-            addr = client_socket.getpeername()
-            logging.info(
-                f"action: receive_message | result: success | ip: {addr[0]} | msg: {msg}"
-            )
-            # TODO: Modify the send to avoid short-writes
-            client_socket.send("{}\n".format(msg).encode("utf-8"))
+            protocol = Protocol(client_socket)
+            packet = protocol.receivePacket()
+            packetResponse = CommandDispatcher.dispatch(packet)             
+            protocol.sendPacket(packetResponse)
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
