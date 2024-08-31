@@ -1,8 +1,8 @@
 import logging
-from common.signal_controller import SignalController
-from common.network.socket_tcp import SocketTCP
-from common.communication.protocol import Protocol
-from common.communication.command_dispatcher import CommandDispatcher
+from src.signal_controller import SignalController
+from src.network.socket_tcp import SocketTCP
+from src.communication.protocol import Protocol
+from src.communication.command_dispatcher import CommandDispatcher
 
 
 class Server:

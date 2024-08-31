@@ -1,7 +1,7 @@
 import logging
-from common.communication.bet_content import BetContent
-from common.communication.packet import PacketResponse
-from common.utils import Bet, store_bets
+from src.communication.bet_content import BetContent
+from src.communication.packet import PacketResponse
+from src.utils import Bet, store_bets
 
 
 class RegisterBetCommand:

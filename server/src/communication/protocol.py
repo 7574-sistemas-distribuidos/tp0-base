@@ -1,7 +1,7 @@
 import logging
-from common.network.utils import htonl, ntohl
-from common.communication.packet import Packet
-from common.communication.packet import PacketResponse
+from src.network.utils import htonl, ntohl
+from src.communication.packet import Packet
+from src.communication.packet import PacketResponse
 
 
 class Protocol:

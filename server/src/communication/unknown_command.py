@@ -1,5 +1,5 @@
 import logging
-from common.communication.packet import PacketResponse
+from src.communication.packet import PacketResponse
 
 class UnknownCommand:
     def __init__(self, packet):
