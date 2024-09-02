@@ -23,11 +23,6 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=1
-      - CLI_NAME=Lionel
-      - CLI_LASTNAME=Messi
-      - CLI_IDNUMBER=12345678
-      - CLI_BIRTHDATE=1987-06-24
-      - CLI_BETNUMBER=10
       - CLI_LOG_LEVEL=DEBUG
     volumes:
     - ./client/config.yaml:/config.yaml
@@ -41,11 +36,6 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=2
-      - CLI_NAME=Cristiano
-      - CLI_LASTNAME=Ronaldo
-      - CLI_IDNUMBER=87654321
-      - CLI_BIRTHDATE=1985-02-05
-      - CLI_BETNUMBER=7
       - CLI_LOG_LEVEL=DEBUG
     volumes:
     - ./client/config.yaml:/config.yaml
@@ -59,11 +49,6 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=3
-      - CLI_NAME=Mike
-      - CLI_LASTNAME=Tyson
-      - CLI_IDNUMBER=13579246
-      - CLI_BIRTHDATE=1966-06-30
-      - CLI_BETNUMBER=1
       - CLI_LOG_LEVEL=DEBUG
     volumes:
     - ./client/config.yaml:/config.yaml
@@ -77,11 +62,6 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=4
-      - CLI_NAME=Santiago Lionel
-      - CLI_LASTNAME=Lorca
-      - CLI_IDNUMBER=30904465
-      - CLI_BIRTHDATE=1999-03-17
-      - CLI_BETNUMBER=7574
       - CLI_LOG_LEVEL=DEBUG
     volumes:
     - ./client/config.yaml:/config.yaml
@@ -95,11 +75,6 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=5
-      - CLI_NAME=Celine
-      - CLI_LASTNAME=Dion
-      - CLI_IDNUMBER=12345678
-      - CLI_BIRTHDATE=1968-03-30
-      - CLI_BETNUMBER=9
       - CLI_LOG_LEVEL=DEBUG
     volumes:
     - ./client/config.yaml:/config.yaml
