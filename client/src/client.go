@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -88,6 +89,28 @@ func (c *Client) processClient(join chan struct{}) {
 	}
 
 	bettingBatch.RegisterBets()
+	c.releaseResources()
+
+	for {
+		time.Sleep(c.config.LoopPeriod)
+		c.createSocket()
+		protocol := communication.NewProtocol(c.config.ID, *c.socket)
+		msg, err := protocol.GetWinners()
+		c.releaseResources()
+		if err != nil {
+			log.Debugf("action: get_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			break
+		}
+		if msg.Status == "OK" {
+			log.Debugf("action: get_winners | result: success | client_id: %v | msg: %v", c.config.ID, *msg)
+			winners := strings.Split(msg.Content, "\n")
+			winners = winners[:len(winners)-1]
+			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: $%v", len(winners))
+			break
+		}
+
+		log.Debugf("action: get_winners | result: fail | client_id: %v | error: %v", c.config.ID, *msg)
+	}
 	join <- struct{}{}
 }
 

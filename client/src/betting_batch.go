@@ -79,7 +79,7 @@ func (bb *BettingBatch) Flush() {
 	if len(bb.outgoingBets) > 0 {
 		bb.registerBets()
 	}
-	bb.closeConnection()
+	bb.closeLoadOfBets()
 }
 
 func (bb *BettingBatch) registerBets() {
@@ -94,9 +94,11 @@ func (bb *BettingBatch) registerBets() {
 	bb.msgID++
 }
 
-func (bb *BettingBatch) closeConnection() {
-	err := bb.protocol.CloseConnection(fmt.Sprintf("%v", bb.msgID))
+func (bb *BettingBatch) closeLoadOfBets() {
+	msg, err := bb.protocol.CloseLoadOfBets(fmt.Sprintf("%v", bb.msgID))
 	if err != nil {
-		log.Debugf("action: close_connection | result: fail | client_id: %v | error: %v", bb.clientConfig.ID, err)
+		log.Debugf("action: close_load_of_bets | result: fail | client_id: %v | error: %v", bb.clientConfig.ID, err)
+		return
 	}
+	log.Debugf("action: close_load_of_bets | result: success | client_id: %v | msg: %v", bb.clientConfig.ID, *msg)
 }
