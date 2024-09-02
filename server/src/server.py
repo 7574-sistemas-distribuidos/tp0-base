@@ -50,14 +50,12 @@ class Server:
         """
         try:
             command = ""
-            while self._is_running and command != "CLOSE_CONNECTION":
+            while self._is_running and command != "CLOSE_LOAD_OF_BETS" and command != "GET_WINNERS":
                 protocol = Protocol(client_socket)
                 packet = protocol.receivePacket()
                 command = packet.command
-
-                if command != "CLOSE_CONNECTION":
-                    packetResponse = CommandDispatcher.dispatch(packet)
-                    protocol.sendPacket(packetResponse)
+                packetResponse = CommandDispatcher.dispatch(packet)
+                protocol.sendPacket(packetResponse)                    
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
