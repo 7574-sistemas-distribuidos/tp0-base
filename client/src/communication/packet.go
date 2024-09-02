@@ -6,6 +6,7 @@ import (
 )
 
 const newLine = "\n"
+const headerContentSeparator = "\n\n"
 const tagValueSeparator = ": "
 
 type Packet struct {
@@ -26,11 +27,22 @@ func (p *Packet) Serialize() string {
 }
 
 type PacketResponse struct {
-	status string
+	Status  string
+	Content string
 }
 
 func DeserializePacketResponse(data string) *PacketResponse {
-	response := strings.Split(data, newLine)
-	statusHeader := strings.Split(response[0], tagValueSeparator)
-	return &PacketResponse{status: statusHeader[1]}
+	response := strings.Split(data, headerContentSeparator)
+	headers := response[0]
+	content := response[1]
+	status := ""
+	for _, header := range strings.Split(headers, newLine) {
+		line := strings.Split(header, tagValueSeparator)
+		tag := line[0]
+		value := line[1]
+		if tag == "STATUS" {
+			status = value
+		}
+	}
+	return &PacketResponse{Status: status, Content: content}
 }
