@@ -25,7 +25,7 @@ class Protocol:
         return self._socket.receive(packetLength).decode(Protocol._encoding_format)
 
     def sendPacket(self, packet):
-        serializedPacket = PacketResponse.serialize(packet)
+        serializedPacket = PacketResponse.serialize(packet).encode(Protocol._encoding_format)
         packetResponseLength = Protocol._calculatePacketLength(serializedPacket)
         self._sendPacket(packetResponseLength, serializedPacket)
 
@@ -33,6 +33,6 @@ class Protocol:
         return htonl(len(serializedPacket))
 
     def _sendPacket(self, length, serializedPacket):
-        packet = length + serializedPacket.encode(Protocol._encoding_format)
+        packet = length + serializedPacket
         self._socket.send(packet)
     

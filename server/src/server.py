@@ -10,7 +10,6 @@ class Server:
         self._set_graceful_shutdown()
         self._server_socket = SocketTCP("", port)
         self._server_socket.bind_and_listen(listen_backlog)
-        self._client_socket = None
         self._is_running = True
 
     def _set_graceful_shutdown(self):
@@ -18,20 +17,12 @@ class Server:
         signal_controller.add_handler(signal_controller.SIGTERM, self._sigterm_handler)
 
     def _sigterm_handler(self, signum, frame):
-        logging.info("action: releasing_resources | result: in_progress")
-        self._release_resources()
+        logging.info("action: releasing_resources | result: in_progress")        
+        self._is_running = False
         logging.info("action: releasing_resources | result: success")
 
     def _release_resources(self):
-        self._release_client_socket()
-        self._release_server_socket()
-        self._is_running = False
-
-    def _release_server_socket(self):
         self._server_socket.close()
-
-    def _release_client_socket(self):
-        self._client_socket.close()
 
     def run(self):
         """
@@ -46,11 +37,11 @@ class Server:
             client_socket = self._accept_new_connection()
             if client_socket is None:
                 continue
+            self._handle_client_connection(client_socket)
 
-            self._client_socket = client_socket
-            self._handle_client_connection()
+        self._release_resources()
 
-    def _handle_client_connection(self):
+    def _handle_client_connection(self, client_socket):
         """
         Read message from a specific client socket and closes the socket
 
@@ -58,15 +49,19 @@ class Server:
         client socket will also be closed
         """
         try:
-            client_socket = self._client_socket
-            protocol = Protocol(client_socket)
-            packet = protocol.receivePacket()
-            packetResponse = CommandDispatcher.dispatch(packet)             
-            protocol.sendPacket(packetResponse)
+            command = ""
+            while self._is_running and command != "CLOSE_CONNECTION":
+                protocol = Protocol(client_socket)
+                packet = protocol.receivePacket()
+                command = packet.command
+
+                if command != "CLOSE_CONNECTION":
+                    packetResponse = CommandDispatcher.dispatch(packet)
+                    protocol.sendPacket(packetResponse)
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
-            self._release_client_socket()
+            client_socket.close()
 
     def _accept_new_connection(self):
         """
