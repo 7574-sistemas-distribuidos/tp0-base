@@ -1,4 +1,5 @@
 import socket
+import logging
 
 class SocketTCP:
     def __init__(self, host, port):
@@ -10,6 +11,8 @@ class SocketTCP:
         if self._socket:
             try:
                 self._socket.shutdown(socket.SHUT_RDWR)
+            except OSError as e:
+                logging.debug("action: close_socket | result: fail | error: {e}")
             finally:
                 self._socket.close()
                 self._socket = None

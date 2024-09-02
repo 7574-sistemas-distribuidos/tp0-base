@@ -16,15 +16,10 @@ var log = logging.MustGetLogger("log")
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
-	ID            string
-	ServerAddress string
-	LoopAmount    int
-	LoopPeriod    time.Duration
-	Name          string
-	LastName      string
-	IdNumber      string
-	Birthdate     string
-	BetNumber     string
+	ID             string
+	ServerAddress  string
+	LoopPeriod     time.Duration
+	BatchMaxAmount int
 }
 
 // Client Entity that encapsulates how
@@ -40,6 +35,10 @@ func NewClient(config ClientConfig) *Client {
 		config: config,
 	}
 	return client
+}
+
+func (c *Client) DeleteClient() {
+	c.releaseResources()
 }
 
 // CreateClientSocket Initializes client socket. In case of
@@ -62,19 +61,14 @@ func (c *Client) StartClientLoop() {
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	join := make(chan struct{}, 1)
-	msgID := 1
-	for msgID <= c.config.LoopAmount {
-		go c.processClient(msgID, join)
+	go c.processClient(join)
 
-		select {
-		case <-signalChannel:
-			c.releaseResources()
-			return
-		case <-join:
-			msgID++
-		}
+	select {
+	case <-signalChannel:
+		return
+	case <-join:
+		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	}
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
 func (c *Client) setGracefulShutdown() chan os.Signal {
@@ -83,49 +77,22 @@ func (c *Client) setGracefulShutdown() chan os.Signal {
 	return signalChannel
 }
 
-func (c *Client) processClient(msgID int, join chan struct{}) {
-	// Create the connection the server in every loop iteration.
+func (c *Client) processClient(join chan struct{}) {
 	c.createSocket()
-	defer c.destroySocket()
-
+	filename := fmt.Sprintf("/dataset/agency-%v.csv", c.config.ID)
 	protocol := communication.NewProtocol(c.config.ID, *c.socket)
-	betContent := communication.BetContent{
-		Name:      c.config.Name,
-		LastName:  c.config.LastName,
-		IdNumber:  c.config.IdNumber,
-		Birthdate: c.config.Birthdate,
-		BetNumber: c.config.BetNumber,
-	}
-	msg, err := protocol.RegisterBet(fmt.Sprintf("%v", msgID), betContent)
-
+	bettingBatch, err := NewBettingBatch(filename, c.config.BatchMaxAmount, c.config, *protocol)
+	defer bettingBatch.DeleteBettingBatch()
 	if err != nil {
-		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
-		return
+		log.Debugf("action: create_betting_batch | result: fail | client_id: %v | error: %v", c.config.ID, err)
 	}
 
-	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-		c.config.ID,
-		*msg,
-	)
-	log.Infof("action: apuesta_enviada | result: success | dni: $%v | numero: $%v",
-		betContent.IdNumber,
-		betContent.BetNumber,
-	)
-
-	// Wait a time between sending one message and the next one
-	time.Sleep(c.config.LoopPeriod)
+	bettingBatch.RegisterBets()
 	join <- struct{}{}
 }
 
 func (c *Client) releaseResources() {
 	log.Infof("action: releasing_resources | result: in_progress | client_id: %v", c.config.ID)
-	c.destroySocket()
-	log.Infof("action: releasing_resources | result: success | client_id: %v", c.config.ID)
-}
-
-func (c *Client) destroySocket() {
 	c.socket.DeleteSocketTCP()
+	log.Infof("action: releasing_resources | result: success | client_id: %v", c.config.ID)
 }

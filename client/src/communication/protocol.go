@@ -20,17 +20,31 @@ func NewProtocol(clientId string, socket network.SocketTCP) *Protocol {
 	}
 }
 
-func (p *Protocol) RegisterBet(messageId string, betContent BetContent) (*PacketResponse, error) {
-	p.sendBetRegister(messageId, betContent)
+func (p *Protocol) RegisterBets(messageId string, betsContent []BetContent) (*PacketResponse, error) {
+	p.sendBetsRegister(messageId, betsContent)
 	return p.receiveBetRegisterResponse()
 }
 
-func (p *Protocol) sendBetRegister(messageId string, betContent BetContent) error {
+func (p *Protocol) sendBetsRegister(messageId string, betsContent []BetContent) error {
+	content := ""
+	for _, betContent := range betsContent {
+		content += fmt.Sprintf("%s\n", betContent.Serialize())
+	}
+
 	packet := Packet{
-		Command:   "REGISTER_BET",
+		Command:   "REGISTER_BETS",
 		ClientId:  p.clientId,
 		MessageId: messageId,
-		Content:   betContent.Serialize(),
+		Content:   content,
+	}
+	return p.sendMessage(packet)
+}
+
+func (p *Protocol) CloseConnection(messageId string) error {
+	packet := Packet{
+		Command:   "CLOSE_CONNECTION",
+		ClientId:  p.clientId,
+		MessageId: messageId,
 	}
 	return p.sendMessage(packet)
 }

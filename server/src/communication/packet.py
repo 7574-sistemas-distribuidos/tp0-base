@@ -1,7 +1,7 @@
 class Packet:
-    _tagValueSeparator = ": "
-    _headerOptions_separator = "\n"
-    _header_end = "\n\n"
+    _tag_value_separator = ": "
+    _new_line_separator = "\n"
+    _header_content_separator = "\n\n"
 
     def __init__(self, command, client_id, message_id, data):
         self.command = command
@@ -11,14 +11,14 @@ class Packet:
 
     def deserialize(serializedPacket):
         occurrences = 1
-        header, content = serializedPacket.split(Packet._header_end, occurrences)
-        headerOptions = header.split(Packet._headerOptions_separator)
+        header, content = serializedPacket.split(Packet._header_content_separator, occurrences)
+        header_options = header.split(Packet._new_line_separator)
 
         command = None
         client_id = None
         message_id = None
-        for option in headerOptions:
-            tag, value = option.split(Packet._tagValueSeparator, occurrences)
+        for option in header_options:
+            tag, value = option.split(Packet._tag_value_separator, occurrences)
             if tag == "COMMAND":
                 command = value
             elif tag == "CLIENT_ID":
@@ -32,8 +32,9 @@ class PacketResponse:
     status_ok = "OK"
     status_ko = "KO"
 
-    def __init__(self, status):
+    def __init__(self, status, data):
         self.status = status
+        self.data = data
 
     def serialize(packetResponse):
-        return f"STATUS: {packetResponse.status}"
+        return f"STATUS: {packetResponse.status}\n\n{packetResponse.data}"
