@@ -15,7 +15,6 @@ class SocketTCP:
                 logging.debug("action: close_socket | result: fail | error: {e}")
             finally:
                 self._socket.close()
-                self._socket = None
 
     def bind_and_listen(self, backlog):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
