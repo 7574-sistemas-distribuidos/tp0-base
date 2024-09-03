@@ -1,8 +1,7 @@
 import logging
 from src.signal_controller import SignalController
 from src.network.socket_tcp import SocketTCP
-from src.communication.protocol import Protocol
-from src.communication.command_dispatcher import CommandDispatcher
+from src.client import Client
 
 
 class Server:
@@ -11,6 +10,7 @@ class Server:
         self._server_socket = SocketTCP("", port)
         self._server_socket.bind_and_listen(listen_backlog)
         self._is_running = True
+        self._clients = []
 
     def _set_graceful_shutdown(self):
         signal_controller = SignalController()
@@ -19,10 +19,12 @@ class Server:
     def _sigterm_handler(self, signum, frame):
         logging.info("action: releasing_resources | result: in_progress")        
         self._is_running = False
+        self._stop_clients()
         logging.info("action: releasing_resources | result: success")
 
     def _release_resources(self):
         self._server_socket.close()
+        self._clean_clients()
 
     def run(self):
         """
@@ -37,29 +39,28 @@ class Server:
             client_socket = self._accept_new_connection()
             if client_socket is None:
                 continue
-            self._handle_client_connection(client_socket)
+
+            client = Client(client_socket)
+            client.start()
+            self._clients.append(client)
+            self._clean_non_running_clients()
 
         self._release_resources()
 
-    def _handle_client_connection(self, client_socket):
-        """
-        Read message from a specific client socket and closes the socket
+    def _clean_non_running_clients(self):
+        running_clients = [client for client in self._clients if client.is_running()]
+        non_running_clients = [client for client in self._clients if not client.is_running()]
+        for non_running_client in non_running_clients:
+            non_running_client.join()
+        self._clients = running_clients
+    
+    def _clean_clients(self):
+        for client in self._clients:
+            client.join()
 
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
-        try:
-            command = ""
-            while self._is_running and command != "CLOSE_LOAD_OF_BETS" and command != "GET_WINNERS":
-                protocol = Protocol(client_socket)
-                packet = protocol.receivePacket()
-                command = packet.command
-                packetResponse = CommandDispatcher.dispatch(packet)
-                protocol.sendPacket(packetResponse)                    
-        except OSError as e:
-            logging.error(f"action: receive_message | result: fail | error: {e}")
-        finally:
-            client_socket.close()
+    def _stop_clients(self):
+        for client in self._clients:
+            client.stop()
 
     def _accept_new_connection(self):
         """

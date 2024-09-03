@@ -7,18 +7,20 @@ from src.utils import Bet, store_bets
 class RegisterBetsCommand:
     _new_line_separator = "\n"
 
-    def __init__(self, packet):
+    def __init__(self, packet, lock):
         self._packet = packet
         self._valid_bets = []
         self._invalid_bets = []
+        self._lock = lock
 
     def execute(self):
         serialized_bets_content = self._packet.data
-
         for serialized_bet_content in serialized_bets_content.splitlines():
             self._validate_bet_content(serialized_bet_content)
 
-        store_bets(self._valid_bets)
+        with self._lock:
+            store_bets(self._valid_bets)
+
         if len(self._invalid_bets) > 0:
             logging.info(
                 f"action: apuesta_recibida | result: fail | cantidad: ${len(self._invalid_bets)}"
