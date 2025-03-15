@@ -1,7 +1,7 @@
 import sys
 from constants import BAD_REQUEST, WRITE_MODE, YAML_TAB
 
-
+# todo make these constants
 def write_server(file):
     file.write(YAML_TAB + "server:\n")
     file.write(YAML_TAB + YAML_TAB + "container_name: server\n")
@@ -15,6 +15,7 @@ def write_server(file):
     file.write("\n")
 
 def write_client(id, file):
+    print("writting client " + str(id))
     file.write(YAML_TAB + "client" + str(id) + ":\n")
     file.write(YAML_TAB + YAML_TAB + "container_name: client" + str(id) + "\n")
     file.write(YAML_TAB + YAML_TAB + "image: client:latest\n")
@@ -29,8 +30,8 @@ def write_client(id, file):
     file.write("\n")
 
 def write_clients(file, clients):
-    for id, _ in enumerate(clients):
-        write_client(id+1, file)
+    for id in range(1, int(clients)+1):
+        write_client(id, file)
 
 def write_services(file, clients):
     file.write("services:\n")
