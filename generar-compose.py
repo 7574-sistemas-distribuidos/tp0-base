@@ -1,7 +1,6 @@
 import sys
-from constants import BAD_REQUEST, WRITE_MODE, YAML_TAB
+from constants import WRITE_MODE, YAML_TAB
 
-# todo make these constants
 def write_server(file):
     file.write(YAML_TAB + "server:\n")
     file.write(YAML_TAB + YAML_TAB + "container_name: server\n")
@@ -15,7 +14,6 @@ def write_server(file):
     file.write("\n")
 
 def write_client(id, file):
-    print("writting client " + str(id))
     file.write(YAML_TAB + "client" + str(id) + ":\n")
     file.write(YAML_TAB + YAML_TAB + "container_name: client" + str(id) + "\n")
     file.write(YAML_TAB + YAML_TAB + "image: client:latest\n")
@@ -52,9 +50,10 @@ def write_file(file, clients):
     write_networks(file)
 
 def create_file(name, clients):
-    print("Creating", name, "file for", clients, "clients") # todo COMO LOGUEARLO?
+    print("Creating", name, "file for", clients, "clients")
     file = open(name, WRITE_MODE)
     write_file(file, clients)
+    print("File succesfully created")
     file.close()
 
 def main():
